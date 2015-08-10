@@ -27,7 +27,7 @@
 #include "config.h"
 #include "FEGaussianBlurNEON.h"
 
-#if CPU(ARM_NEON) && COMPILER(GCC)
+#if CPU(ARM_NEON) && COMPILER(GCC) && 0 /*oskwon*/
 
 #include <wtf/Alignment.h>
 
