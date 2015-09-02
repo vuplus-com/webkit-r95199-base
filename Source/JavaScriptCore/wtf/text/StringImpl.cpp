@@ -984,8 +984,13 @@ bool equal(const StringImpl* a, const char* b)
 
     unsigned length = a->length();
     const UChar* as = a->characters();
+
+	if (length != strlen(b))
+		return false;
+
     for (unsigned i = 0; i != length; ++i) {
         unsigned char bc = b[i];
+
         if (!bc)
             return false;
         if (as[i] != bc)
@@ -1045,6 +1050,9 @@ bool equalIgnoringCase(StringImpl* a, const char* b)
 
     unsigned length = a->length();
     const UChar* as = a->characters();
+
+	if (length != strlen(b))
+		return false;
 
     // Do a faster loop for the case where all the characters are ASCII.
     UChar ored = 0;
