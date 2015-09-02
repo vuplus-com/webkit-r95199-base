@@ -3961,8 +3961,6 @@ webcoregtk_sources += \
 	Source/WebCore/platform/graphics/gstreamer/VideoSinkGStreamer.h \
 	Source/WebCore/platform/graphics/gstreamer/WebKitWebSourceGStreamer.cpp \
 	Source/WebCore/platform/graphics/gstreamer/WebKitWebSourceGStreamer.h \
-	Source/WebCore/platform/graphics/elis/MediaPlayerPrivateElisIPC.h \
-	Source/WebCore/platform/graphics/elis/MediaPlayerPrivateElisIPC.cpp \
 	Source/WebCore/platform/graphics/gtk/ColorGtk.cpp \
 	Source/WebCore/platform/graphics/gtk/GdkCairoUtilities.cpp \
 	Source/WebCore/platform/graphics/gtk/GdkCairoUtilities.h \
