@@ -413,7 +413,6 @@ bool SubframeLoader::loadPlugin(HTMLPlugInImageElement* pluginElement, const KUR
 	}
 
     if (!widget) {
-		fprintf( stderr, "%s %s %d MimeType %s\n", __FILE__, __func__, __LINE__, mimeType.utf8().data() );
         renderer->setShowsMissingPluginIndicator();
         return false;
     }
@@ -434,8 +433,6 @@ bool SubframeLoader::loadPlugin(HTMLPlugInImageElement* pluginElement, const KUR
 bool SubframeLoader::loadPluginWithoutRenderer(HTMLPlugInImageElement* pluginElement, const KURL& url, const String& mimeType,
     const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback)
 {
-	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
-	
     if (!document()->securityOrigin()->canDisplay(url)) {
         FrameLoader::reportLocalLoadFailed(m_frame, url.string());
         return NULL;
@@ -449,10 +446,8 @@ bool SubframeLoader::loadPluginWithoutRenderer(HTMLPlugInImageElement* pluginEle
         return NULL;
 
     IntSize contentSize( 0, 0 );
-	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
 
     bool loadManually = document()->isPluginDocument() && !m_containsPlugins && toPluginDocument(document())->shouldLoadPluginManually();
-	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
 
     RefPtr<Widget> widget = frameLoader->client()->createPlugin(contentSize,
         pluginElement, url, paramNames, paramValues, mimeType, loadManually);

@@ -757,14 +757,12 @@ void HTMLMediaElement::loadResource(const KURL& initialURL, ContentType& content
 
     Frame* frame = document()->frame();
     if (!frame) {
-    	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
         mediaLoadingFailed(MediaPlayer::FormatError);
         return;
     }
 
     KURL url = initialURL;
     if (!frame->loader()->willLoadMediaElementURL(url)) {
-    	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
         mediaLoadingFailed(MediaPlayer::FormatError);
         return;
     }
@@ -807,7 +805,7 @@ void HTMLMediaElement::loadResource(const KURL& initialURL, ContentType& content
 #endif
 
     LOG(Media, "HTMLMediaElement::loadResource - m_currentSrc -> %s", urlForLogging(m_currentSrc).utf8().data());
-    fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
+
     if (m_sendProgressEvents) 
         startProgressEventTimer();
 
@@ -825,7 +823,7 @@ void HTMLMediaElement::loadResource(const KURL& initialURL, ContentType& content
     if (fastHasAttribute(mutedAttr))
         m_muted = true;
     updateVolume();
-    fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
+
     if (!m_player->load(url.string(), contentType))
         mediaLoadingFailed(MediaPlayer::FormatError);
 

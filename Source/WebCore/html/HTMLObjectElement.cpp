@@ -409,7 +409,6 @@ void HTMLObjectElement::updateWidgetIfNecessary()
 			// FIXME: This should ASSERT isFinishedParsingChildren() instead.
 			if (!isFinishedParsingChildren() && !OIPF_HAS_NO_DISPLAY( m_oipfType ) )
 			{
-				fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
 				return;
 			}
 			
@@ -424,7 +423,6 @@ void HTMLObjectElement::updateWidgetIfNecessary()
 			// Note: url is modified above by parametersForPlugin.
 			if (!allowedToLoadFrameURL(url))
 			{
-				fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );				
 				return;
 			}
 							
@@ -442,12 +440,9 @@ void HTMLObjectElement::updateWidgetIfNecessary()
 			
 			RefPtr<HTMLObjectElement> protect(this); // Loading the plugin might remove us from the document.
 			SubframeLoader* loader = document()->frame()->loader()->subframeLoader();
-			fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
 			
 			if( beforeLoadAllowedLoad && hasValidClassId() )
 				loader->requestObjectWithoutRenderer(this, url, getAttribute(nameAttr), serviceType, paramNames, paramValues);
-
-			fprintf( stderr, "m_widget = %x\n", ( m_widget == 0 ) );
 
 			if( m_widget )
 			{
@@ -463,7 +458,6 @@ void HTMLObjectElement::updateWidgetIfNecessary()
 
     if (!needsWidgetUpdate() || useFallbackContent() || isImageType())
     {
-		fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );		
         return;
     }
 
@@ -534,7 +528,6 @@ bool HTMLObjectElement::rendererIsNeeded(const NodeRenderingContext& context)
     Frame* frame = document()->frame();
     if (!frame)
         return false;
-	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
 
 	/* hbbtv Object for OIPF will be always rendered 
     if (equalIgnoringCase(serviceType(), "application/oipfobjectfactory") 

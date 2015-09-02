@@ -255,14 +255,12 @@ static MediaPlayerFactory* bestMediaEngineForTypeAndCodecs(const String& type, c
 {
     if (type.isEmpty())
     {
-    	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
         return 0;
     }
 
     Vector<MediaPlayerFactory*>& engines = installedMediaEngines();
     if (engines.isEmpty())
     {
-    	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
         return 0;
     }
 
@@ -272,7 +270,6 @@ static MediaPlayerFactory* bestMediaEngineForTypeAndCodecs(const String& type, c
     if (type == applicationOctetStream()) {
         if (!codecs.isEmpty())
         {
-        	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
             return 0;
         }
     }
