@@ -53,6 +53,7 @@
 #include <libsoup/soup-request-http.h>
 #include <libsoup/soup-requester.h>
 #include <libsoup/soup.h>
+#include <libsoup/soup-cache.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -60,7 +61,7 @@
 
 namespace WebCore {
 
-#define READ_BUFFER_SIZE 8192
+#define READ_BUFFER_SIZE 8192*8
 
 class WebCoreSynchronousLoader : public ResourceHandleClient {
     WTF_MAKE_NONCOPYABLE(WebCoreSynchronousLoader);
@@ -569,6 +570,37 @@ static bool startHTTPRequest(ResourceHandle* handle)
 
     ResourceRequest request(handle->firstRequest());
     KURL url(request.url());
+
+	fprintf( stderr, "protocol = %s\n", url.protocol().utf8().data() );
+
+	if( url.protocol() == "dvb" )
+	{
+		static char* ipc_host = NULL;
+
+		if( ipc_host == NULL )
+		{
+			ipc_host = getenv( "HBB_SYSTEM_IP" );
+			ipc_host = "127.0.0.1";			
+		}
+		
+		fprintf( stderr, "path = %s\n", url.path().utf8().data() );
+		String host = url.host();
+
+		fprintf( stderr, "host = %s\n", host.utf8().data() );
+
+		url.setProtocol( "http" );
+		url.setHost( ipc_host );
+		url.setPort( 9000 );
+
+		String path( "dvb/" );
+		path.append( host );
+		path.append( url.path() );		
+		url.setPath( path );
+
+		fprintf( stderr, "new path = %s\n", url.path().utf8().data() );
+	}
+
+
     url.removeFragmentIdentifier();
     request.setURL(url);
 
@@ -662,7 +694,8 @@ bool ResourceHandle::start(NetworkingContext* context)
     // Used to set the authentication dialog toplevel; may be NULL
     d->m_context = context;
 
-    if (equalIgnoringCase(protocol, "http") || equalIgnoringCase(protocol, "https")) {
+
+    if (equalIgnoringCase(protocol, "http") || equalIgnoringCase(protocol, "https") || equalIgnoringCase( protocol, "dvb" )) {
         if (startHTTPRequest(this))
             return true;
     }
@@ -804,9 +837,13 @@ static void readCallback(GObject* source, GAsyncResult* asyncResult, gpointer da
                               d->m_cancellable.get(), readCallback, data);
 }
 
+#include <stdio.h>
+
 static bool startNonHTTPRequest(ResourceHandle* handle, KURL url)
 {
     ASSERT(handle);
+
+
 
     if (handle->firstRequest().httpMethod() != "GET" && handle->firstRequest().httpMethod() != "POST")
         return false;
@@ -824,6 +861,7 @@ static bool startNonHTTPRequest(ResourceHandle* handle, KURL url)
         d->m_soupRequest = 0;
         return false;
     }
+	fprintf( stderr, "URL = %s\n", urlStr.data() );
 
     g_object_set_data(G_OBJECT(d->m_soupRequest.get()), "webkit-resource", handle);
 
@@ -848,9 +886,12 @@ SoupSession* ResourceHandle::defaultSession()
 
     if (!session) {
         session = soup_session_async_new();
+		
         g_object_set(session,
                      SOUP_SESSION_MAX_CONNS, maxConnections,
                      SOUP_SESSION_MAX_CONNS_PER_HOST, maxConnectionsPerHost, 
+                     SOUP_SESSION_ADD_FEATURE_BY_TYPE, SOUP_TYPE_CONTENT_DECODER,
+                     SOUP_SESSION_USE_THREAD_CONTEXT, TRUE,
                      NULL);
     }
 

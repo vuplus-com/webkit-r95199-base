@@ -136,6 +136,7 @@ void HTMLDocument::setDesignMode(const String& value)
     Document::setDesignMode(mode);
 }
 
+/* To Document.cpp 
 static Node* focusedFrameOwnerElement(Frame* focusedFrame, Frame* currentFrame)
 {
     for (; focusedFrame; focusedFrame = focusedFrame->tree()->parent()) {
@@ -161,6 +162,7 @@ Element* HTMLDocument::activeElement()
         return toElement(node);
     return body();
 }
+*/
 
 bool HTMLDocument::hasFocus()
 {

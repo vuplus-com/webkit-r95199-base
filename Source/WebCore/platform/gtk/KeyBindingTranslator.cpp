@@ -197,6 +197,7 @@ static const KeyCombinationEntry keyDownEntries[] = {
 static const KeyCombinationEntry keyPressEntries[] = {
     { GDK_Tab,       0,                              "InsertTab"     },
     { GDK_Tab,       GDK_SHIFT_MASK,                 "InsertBacktab" },
+    { GDK_Left,       GDK_MOD2_MASK,                 "DeleteBackward" },		
 };
 
 void KeyBindingTranslator::getEditorCommandsForKeyEvent(GdkEventKey* event, EventType type, Vector<WTF::String>& commandList)

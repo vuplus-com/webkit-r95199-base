@@ -1345,7 +1345,7 @@ double DOMWindow::devicePixelRatio() const
     return page->deviceScaleFactor();
 }
 
-#if ENABLE(DATABASE)
+#if ENABLE(SQL_DATABASE)
 PassRefPtr<Database> DOMWindow::openDatabase(const String& name, const String& version, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback> creationCallback, ExceptionCode& ec)
 {
     RefPtr<Database> database = 0;
@@ -1863,6 +1863,11 @@ void DOMWindow::showModalDialog(const String& urlString, const String& dialogFea
         return;
 
     dialogFrame->page()->chrome()->runModal();
+}
+
+void DOMWindow::debug( const String& arg )
+{
+	fprintf( stderr, "Console Debug --> %s\n", arg.utf8().data() );
 }
 
 #if ENABLE(BLOB)

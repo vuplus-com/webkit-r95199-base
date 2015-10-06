@@ -95,6 +95,7 @@ private:
     enum PendingSheetType { None, NonBlocking, Blocking };
     void addPendingSheet(PendingSheetType);
     void removePendingSheet();
+    void asyncRemovePendingSheet();
 
 private:
     HTMLLinkElement(const QualifiedName&, Document*, bool createdByParser);

@@ -102,7 +102,7 @@ static void sessionAuthenticate(SoupSession* session, SoupMessage* message, Soup
 
 static void attach(SoupSessionFeature* manager, SoupSession* session)
 {
-    g_signal_connect(session, "authenticate", G_CALLBACK(sessionAuthenticate), manager);
+//    g_signal_connect(session, "authenticate", G_CALLBACK(sessionAuthenticate), manager);
 }
 
 static void detach(SoupSessionFeature* manager, SoupSession* session)

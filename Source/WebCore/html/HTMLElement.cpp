@@ -364,7 +364,7 @@ static PassRefPtr<DocumentFragment> createFragmentFromSource(const String& marku
 
     bool wasValid = fragment->parseXML(markup, contextElement);
     if (!wasValid) {
-        ec = INVALID_STATE_ERR;
+ //       ec = INVALID_STATE_ERR;
         return 0;
     }
     return fragment;

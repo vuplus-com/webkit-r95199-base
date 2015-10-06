@@ -69,6 +69,7 @@
 #include "StyleSheet.h"
 #include "StyledElement.h"
 #include "Text.h"
+#include "NodeList.h" // kdhong
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 
@@ -180,7 +181,29 @@ JSValue JSNode::appendChild(ExecState* exec)
 {
     Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->appendChild(toNode(exec->argument(0)), ec, true);
+
+	/* kdhong - to make instant adding for plugin objects */
+	bool lazy = true;
+	Node* child = static_cast<Node*>(toNode(exec->argument(0)));
+
+	if( child && child->isElementNode() == true )
+	{
+		Element* el = static_cast<Element*>(child);
+
+		if( el->hasChildNodes() == true )
+		{			
+			RefPtr<NodeList> list = el->getElementsByTagName("object");
+			unsigned len = list->length();
+
+			if( len > 0 )
+			{
+				fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
+				lazy = false;
+			}
+		}
+	}
+	
+    bool ok = imp->appendChild(toNode(exec->argument(0)), ec, lazy);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(0);

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -118,6 +119,23 @@ static JSValue namedItemGetter(ExecState* exec, JSValue slotBase, const Identifi
         return toJS(exec, thisObj, collection->firstItem());
     return toJS(exec, thisObj, collection.get());
 }
+
+
+static JSValue namedItemGetter2(ExecState* exec, JSValue slotBase, const Identifier& propertyName)
+{
+    JSDOMWindowBase* thisObj = static_cast<JSDOMWindow*>(asObject(slotBase));
+    Document* document = thisObj->impl()->frame()->document();
+
+    ASSERT(thisObj->allowsAccessFrom(exec));
+    ASSERT(document);
+    ASSERT(document->isXHTMLDocument());
+
+    Element* element = document->getElementById( identifierToAtomicString( propertyName ) );
+	
+
+    return toJS(exec, thisObj, element);
+}
+
 
 bool JSDOMWindow::getOwnPropertySlot(ExecState* exec, const Identifier& propertyName, PropertySlot& slot)
 {
@@ -261,6 +279,15 @@ bool JSDOMWindow::getOwnPropertySlot(ExecState* exec, const Identifier& property
         }
     }
 
+	// getElementById()
+    if (document->isXHTMLDocument()) {
+        AtomicStringImpl* atomicPropertyName = findAtomicString(propertyName);
+        if (atomicPropertyName && (document->getElementById(identifierToAtomicString(propertyName) ) )) {
+            slot.setCustom(this, namedItemGetter2);
+            return true;
+        }
+    }
+
     return Base::getOwnPropertySlot(exec, propertyName, slot);
 }
 
@@ -332,7 +359,18 @@ bool JSDOMWindow::getOwnPropertyDescriptor(ExecState* exec, const Identifier& pr
             return true;
         }
     }
-    
+
+	// getElementById()
+    if (document->isXHTMLDocument()) {
+        AtomicStringImpl* atomicPropertyName = findAtomicString(propertyName);
+        if (atomicPropertyName && (document->getElementById(identifierToAtomicString(propertyName) ) )) {
+            PropertySlot slot;
+            slot.setCustom(this, namedItemGetter2);
+            descriptor.setDescriptor(slot.getValue(exec, propertyName), ReadOnly | DontDelete | DontEnum);
+            return true;
+        }
+    }
+	
     return Base::getOwnPropertyDescriptor(exec, propertyName, descriptor);
 }
 
@@ -481,12 +519,10 @@ JSValue JSDOMWindow::event(ExecState* exec) const
     return toJS(exec, const_cast<JSDOMWindow*>(this), event);
 }
 
-#if ENABLE(EVENTSOURCE)
 JSValue JSDOMWindow::eventSource(ExecState* exec) const
 {
     return getDOMConstructor<JSEventSourceConstructor>(exec, this);
 }
-#endif
 
 JSValue JSDOMWindow::image(ExecState* exec) const
 {
@@ -722,6 +758,11 @@ JSValue JSDOMWindow::postMessage(ExecState* exec)
     setDOMException(exec, ec);
 
     return jsUndefined();
+}
+
+JSValue JSDOMWindow::webkitPostMessage(ExecState* exec)
+{
+    return postMessage(exec);
 }
 
 JSValue JSDOMWindow::setTimeout(ExecState* exec)

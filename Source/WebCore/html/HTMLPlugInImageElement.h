@@ -49,6 +49,8 @@ public:
     const String& serviceType() const { return m_serviceType; }
     const String& url() const { return m_url; }
     bool shouldPreferPlugInsForImages() const { return m_shouldPreferPlugInsForImages; }
+	virtual PassRefPtr<Widget> getPredefinedWidget();
+    virtual void setWidget(PassRefPtr<Widget>){}
 
 protected:
     HTMLPlugInImageElement(const QualifiedName& tagName, Document*, bool createdByParser, PreferPlugInsForImagesOption);
@@ -70,6 +72,7 @@ protected:
     bool wouldLoadAsNetscapePlugin(const String& url, const String& serviceType);
 
     virtual void willMoveToNewOwnerDocument();
+    virtual void updateWidgetIfNecessary();
 
 private:
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
@@ -77,7 +80,6 @@ private:
     
     virtual void finishParsingChildren();
 
-    void updateWidgetIfNecessary();
     virtual bool useFallbackContent() const { return false; }
     
     bool m_needsWidgetUpdate;

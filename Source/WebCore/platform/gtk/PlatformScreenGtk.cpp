@@ -38,6 +38,13 @@
 
 #include <gtk/gtk.h>
 
+#ifdef GDK_WINDOWING_DIRECTFB
+#ifdef GDK_WINDOWING_X11
+#undef GDK_WINDOWING_X11
+#undef GDK_WINDOWING_WIN32
+#endif
+#endif
+
 #if PLATFORM(X11)
 #include <gdk/gdkx.h>
 #include <X11/Xatom.h>

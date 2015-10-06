@@ -404,6 +404,9 @@ webkit_web_view_get_dom_document                (WebKitWebView        *webView);
 WEBKIT_API WebKitViewportAttributes*
 webkit_web_view_get_viewport_attributes         (WebKitWebView        *webView);
 
+WEBKIT_API gboolean
+webkit_web_view_check_multitap_event			(WebKitWebView *webView, GdkEventKey *keyEvent, gint* x, gint* y, gint* height );
+
 G_END_DECLS
 
 #endif

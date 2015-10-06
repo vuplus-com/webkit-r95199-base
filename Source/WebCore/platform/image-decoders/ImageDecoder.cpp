@@ -167,7 +167,7 @@ void ImageFrame::zeroFillPixelData()
     m_hasAlpha = true;
 }
 
-#if !USE(CG)
+#if !USE(CG) // && !USE(CAIRO)
 
 void ImageFrame::copyReferenceToBitmapData(const ImageFrame& other)
 {

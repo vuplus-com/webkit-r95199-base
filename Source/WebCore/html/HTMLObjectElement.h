@@ -62,6 +62,28 @@ public:
     using TreeShared<ContainerNode>::deref;
 
     virtual bool canContainRangeEndPoint() const { return useFallbackContent(); }
+    virtual Widget* pluginWidget();
+    virtual void setWidget(PassRefPtr<Widget>);
+	PassRefPtr<Widget> getPredefinedWidget();
+
+#if ENABLE(NETSCAPE_PLUGIN_API)
+	NPObject* getNPObject();
+#endif
+
+	typedef enum
+	{
+		NO_OIPF_OBJ = 0,
+		OIPF_OBJ_FACTORY,
+		OIPF_APP_MANANGER,
+		OIPF_CONFIGURATION,
+		OIPF_CAPABILITIES,
+		OIPF_DRMAGENT,
+		OIPF_VIDEO_BC,
+		OIPF_VIDEO_MPEG,
+		VALUPS_SYSTEM,
+		H_PORTAL_PROFILE,
+		
+	}OipfType;
 
 private:
     HTMLObjectElement(const QualifiedName&, Document*, HTMLFormElement*, bool createdByParser);
@@ -101,11 +123,15 @@ private:
     virtual HTMLFormElement* virtualForm() const;
 
     virtual const AtomicString& formControlName() const;
+	void updateWidgetIfNecessary();
 
     AtomicString m_id;
     String m_classId;
     bool m_docNamedItem : 1;
     bool m_useFallbackContent : 1;
+
+	OipfType m_oipfType;	
+    RefPtr<Widget> m_widget;
 };
 
 }

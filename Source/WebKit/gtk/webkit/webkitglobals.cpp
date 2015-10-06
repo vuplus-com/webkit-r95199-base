@@ -128,14 +128,14 @@ void webkit_set_cache_model(WebKitCacheModel model)
     switch (model) {
     case WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER:
         pageCacheCapacity = 0;
-        cacheTotalCapacity = 0; // FIXME: The Mac port actually sets this to larger than 0.
-        cacheMinDeadCapacity = 0;
-        cacheMaxDeadCapacity = 0;
+        cacheTotalCapacity = 4 * 1024 * 1024;
+        cacheMinDeadCapacity = cacheTotalCapacity / 8;
+        cacheMaxDeadCapacity = cacheTotalCapacity / 4;
         deadDecodedDataDeletionInterval = 0;
         break;
     case WEBKIT_CACHE_MODEL_DOCUMENT_BROWSER:
-        pageCacheCapacity = 2;
-        cacheTotalCapacity = 16 * 1024 * 1024;
+        pageCacheCapacity = 0;
+        cacheTotalCapacity = 12 * 1024 * 1024;
         cacheMinDeadCapacity = cacheTotalCapacity / 8;
         cacheMaxDeadCapacity = cacheTotalCapacity / 4;
         deadDecodedDataDeletionInterval = 0;

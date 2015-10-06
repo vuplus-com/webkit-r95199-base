@@ -245,6 +245,12 @@ void HTMLMediaElement::didMoveToNewOwnerDocument()
     HTMLElement::didMoveToNewOwnerDocument();
 }
 
+bool HTMLMediaElement::supportsFocus() const
+{
+    // If no controls specified, we should still be able to focus the element if it has tabIndex.
+    return controls() ||  HTMLElement::supportsFocus();
+}
+
 void HTMLMediaElement::attributeChanged(Attribute* attr, bool preserveDecls)
 {
     HTMLElement::attributeChanged(attr, preserveDecls);
@@ -747,15 +753,18 @@ void HTMLMediaElement::loadResource(const KURL& initialURL, ContentType& content
     ASSERT(isSafeToLoadURL(initialURL, Complain));
 
     LOG(Media, "HTMLMediaElement::loadResource(%s, %s)", urlForLogging(initialURL).utf8().data(), contentType.raw().utf8().data());
+    fprintf( stderr, "HTMLMediaElement::loadResource(%s, %s)\n", initialURL.string().utf8().data(), contentType.raw().utf8().data());
 
     Frame* frame = document()->frame();
     if (!frame) {
+    	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
         mediaLoadingFailed(MediaPlayer::FormatError);
         return;
     }
 
     KURL url = initialURL;
     if (!frame->loader()->willLoadMediaElementURL(url)) {
+    	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
         mediaLoadingFailed(MediaPlayer::FormatError);
         return;
     }
@@ -798,7 +807,7 @@ void HTMLMediaElement::loadResource(const KURL& initialURL, ContentType& content
 #endif
 
     LOG(Media, "HTMLMediaElement::loadResource - m_currentSrc -> %s", urlForLogging(m_currentSrc).utf8().data());
-
+    fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
     if (m_sendProgressEvents) 
         startProgressEventTimer();
 
@@ -816,7 +825,7 @@ void HTMLMediaElement::loadResource(const KURL& initialURL, ContentType& content
     if (fastHasAttribute(mutedAttr))
         m_muted = true;
     updateVolume();
-
+    fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
     if (!m_player->load(url.string(), contentType))
         mediaLoadingFailed(MediaPlayer::FormatError);
 

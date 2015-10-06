@@ -37,8 +37,9 @@ SoupCookieJar* defaultCookieJar()
     if (!cookiesInitialized) {
         cookiesInitialized = true;
 
-        cookieJar = soup_cookie_jar_new();
-        soup_cookie_jar_set_accept_policy(cookieJar, SOUP_COOKIE_JAR_ACCEPT_NO_THIRD_PARTY);
+//        cookieJar = soup_cookie_jar_new();
+		cookieJar = soup_cookie_jar_text_new( "/config/cookies.txt", 0 );
+//        soup_cookie_jar_set_accept_policy(cookieJar, SOUP_COOKIE_JAR_ACCEPT_NO_THIRD_PARTY);
     }
 
     return cookieJar;

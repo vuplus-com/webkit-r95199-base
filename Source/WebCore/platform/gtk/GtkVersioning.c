@@ -22,11 +22,15 @@
 
 #include <gtk/gtk.h>
 
+#ifndef gdk_pixmap_unref
+#define gdk_pixmap_unref               gdk_drawable_unref
+#endif
+
 #if !GTK_CHECK_VERSION(2, 14, 0)
-void gtk_adjustment_set_value(GtkAdjustment* adjusment, gdouble value)
+void gtk_adjustment_set_value(GtkAdjustment* adjustment, gdouble value)
 {
-        m_adjustment->value = m_currentPos;
-        gtk_adjustment_value_changed(m_adjustment);
+        adjustment->value = value;
+        gtk_adjustment_value_changed(adjustment);
 }
 
 void gtk_adjustment_configure(GtkAdjustment* adjustment, gdouble value, gdouble lower, gdouble upper,

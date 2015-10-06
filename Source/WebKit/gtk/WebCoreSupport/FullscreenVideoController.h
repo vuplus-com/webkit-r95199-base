@@ -74,7 +74,9 @@ private:
     void updateHudPosition();
 
     RefPtr<WebCore::HTMLMediaElement> m_mediaElement;
+#if USE(GSTREAMER)
     RefPtr<WebCore::GStreamerGWorld> m_gstreamerGWorld;
+#endif
 
     guint m_hudTimeoutId;
     guint m_progressBarUpdateId;

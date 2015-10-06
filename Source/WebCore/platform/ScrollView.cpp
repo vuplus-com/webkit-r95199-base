@@ -64,6 +64,12 @@ ScrollView::ScrollView()
 
 ScrollView::~ScrollView()
 {
+	/* kdhong */
+    HashSet<RefPtr<Widget> >::iterator end = m_children.end();
+    for (HashSet<RefPtr<Widget> >::iterator it = m_children.begin(); it != end; ++it)
+        (*it)->setParent( NULL );
+	/* kdhong */
+	
     platformDestroy();
 }
 
@@ -648,6 +654,8 @@ void ScrollView::scrollContents(const IntSize& scrollDelta)
     if (GraphicsLayer* overhangLayer = layerForOverhangAreas()) {
         bool hasOverhangArea = !horizontalOverhangRect.isEmpty() || !verticalOverhangRect.isEmpty();
         overhangLayer->setDrawsContent(hasOverhangArea);
+        if (hasOverhangArea)
+            overhangLayer->setNeedsDisplay();
     }
 #endif
     if (!horizontalOverhangRect.isEmpty())
@@ -993,6 +1001,7 @@ void ScrollView::paintPanScrollIcon(GraphicsContext* context)
 
 void ScrollView::paint(GraphicsContext* context, const IntRect& rect)
 {
+//	fprintf( stderr, "   >>>>Paint!!!!\n" );
     if (platformWidget()) {
         Widget::paint(context, rect);
         return;
@@ -1052,6 +1061,8 @@ void ScrollView::paint(GraphicsContext* context, const IntRect& rect)
     // Paint the panScroll Icon
     if (m_drawPanScrollIcon)
         paintPanScrollIcon(context);
+
+//	fprintf( stderr, "	 <<<<Paint!!!!\n" );
 }
 
 void ScrollView::calculateOverhangAreasForPainting(IntRect& horizontalOverhangRect, IntRect& verticalOverhangRect)

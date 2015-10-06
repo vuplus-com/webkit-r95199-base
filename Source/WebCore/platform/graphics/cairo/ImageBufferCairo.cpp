@@ -43,7 +43,7 @@
 #include "RefPtrCairo.h"
 #include <cairo.h>
 #include <wtf/Vector.h>
-
+#include <stdio.h>
 using namespace std;
 
 namespace WebCore {
@@ -62,6 +62,8 @@ ImageBuffer::ImageBuffer(const IntSize& size, ColorSpace, RenderingMode, bool& s
     m_data.m_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
                                                   size.width(),
                                                   size.height());
+
+	printf( "Cairo image surface created without data %d %d\n", size.width(), size.height() );
     if (cairo_surface_status(m_data.m_surface) != CAIRO_STATUS_SUCCESS)
         return;  // create will notice we didn't set m_initialized and fail.
 

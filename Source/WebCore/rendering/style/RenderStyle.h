@@ -1140,7 +1140,7 @@ public:
     void setColumnRuleColor(const Color& c) { SET_VAR(rareNonInheritedData.access()->m_multiCol, m_rule.m_color, c); }
     void setColumnRuleStyle(EBorderStyle b) { SET_VAR(rareNonInheritedData.access()->m_multiCol, m_rule.m_style, b); }
     void setColumnRuleWidth(unsigned short w) { SET_VAR(rareNonInheritedData.access()->m_multiCol, m_rule.m_width, w); }
-    void resetColumnRule() { SET_VAR(rareNonInheritedData.access()->m_multiCol, m_rule, BorderValue()) }
+    void resetColumnRule() { /*SET_VAR(rareNonInheritedData.access()->m_multiCol, m_rule, BorderValue())*/ /*rareNonInheritedData->m_multiCol->m_rule.reset();*/ /* kdhong - to avoid SH4 */}
     void setColumnSpan(bool b) { SET_VAR(rareNonInheritedData.access()->m_multiCol, m_columnSpan, b); }
     void setColumnBreakBefore(EPageBreak p) { SET_VAR(rareNonInheritedData.access()->m_multiCol, m_breakBefore, p); }
     // For valid values of column-break-inside see http://www.w3.org/TR/css3-multicol/#break-before-break-after-break-inside
@@ -1357,7 +1357,7 @@ public:
     static int initialLetterWordSpacing() { return 0; }
     static Length initialSize() { return Length(); }
     static Length initialMinSize() { return Length(0, Fixed); }
-    static Length initialMaxSize() { return Length(undefinedLength, Fixed); }
+    static Length initialMaxSize() { return Length(Undefined); }
     static Length initialOffset() { return Length(); }
     static Length initialMargin() { return Length(Fixed); }
     static Length initialPadding() { return Length(Fixed); }

@@ -429,6 +429,8 @@ void PNGImageDecoder::decode(bool onlySize)
     if (failed())
         return;
 
+	fprintf( stderr, "PNG Decoding - %d, %d\n", size().width(), size().height() );
+
     if (!m_reader)
         m_reader = adoptPtr(new PNGImageReader(this));
 

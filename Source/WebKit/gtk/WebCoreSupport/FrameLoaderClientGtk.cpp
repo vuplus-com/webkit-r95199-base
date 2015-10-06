@@ -146,6 +146,7 @@ static void notifyAccessibilityStatus(WebKitWebFrame* frame, WebKitLoadStatus lo
     if (!coreAxObject)
         return;
 
+#if HAVE(ACCESSIBILITY)
     AtkObject* axObject = coreAxObject->wrapper();
     if (!axObject || !ATK_IS_DOCUMENT(axObject))
         return;
@@ -166,6 +167,7 @@ static void notifyAccessibilityStatus(WebKitWebFrame* frame, WebKitLoadStatus lo
     default:
         break;
     }
+#endif	
 }
 
 static void notifyStatus(WebKitWebFrame* frame, WebKitLoadStatus loadStatus)
@@ -713,18 +715,6 @@ bool FrameLoaderClient::shouldStopLoadingForHistoryItem(HistoryItem* item) const
     return true;
 }
 
-void FrameLoaderClient::dispatchDidAddBackForwardItem(HistoryItem*) const
-{
-}
-
-void FrameLoaderClient::dispatchDidRemoveBackForwardItem(HistoryItem*) const
-{
-}
-
-void FrameLoaderClient::dispatchDidChangeBackForwardIndex() const
-{
-}
-
 void FrameLoaderClient::didDisplayInsecureContent()
 {
     notImplemented();
@@ -1114,15 +1104,18 @@ void FrameLoaderClient::dispatchDidFailLoad(const ResourceError& error)
     GFile* errorFile = g_file_new_for_uri(errorURI);
     g_free(errorURI);
 
-    if (!errorFile)
-        content = makeString("<html><body>", webError->message, "</body></html>");
-    else {
-        gboolean loaded = g_file_load_contents(errorFile, 0, &fileContent, 0, 0, 0);
-        if (!loaded)
-            content = makeString("<html><body>", webError->message, "</body></html>");
-        else
-            content = String::format(fileContent, error.failingURL().utf8().data(), webError->message);
-    }
+	/*
+		if (!errorFile)
+			content = makeString("<html><body>", webError->message, "</body></html>");
+		else {
+			gboolean loaded = g_file_load_contents(errorFile, 0, &fileContent, 0, 0, 0);
+			if (!loaded)
+				content = makeString("<html><body>", webError->message, "</body></html>");
+			else
+				content = String::format(fileContent, error.failingURL().utf8().data(), webError->message);
+		} */
+	
+	content = makeString("<html><body>", "</body></html>"); /* To Hide Error Message */
 
     webkit_web_frame_load_alternate_string(m_frame, content.utf8().data(), 0, error.failingURL().utf8().data());
 
@@ -1154,8 +1147,11 @@ ResourceError FrameLoaderClient::blockedError(const ResourceRequest& request)
                          request.url().string(), _("Not allowed to use restricted network port"));
 }
 
+#include <stdio.h>
+
 ResourceError FrameLoaderClient::cannotShowURLError(const ResourceRequest& request)
 {
+	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
     return ResourceError(g_quark_to_string(WEBKIT_POLICY_ERROR), WEBKIT_POLICY_ERROR_CANNOT_SHOW_URL,
                          request.url().string(), _("URL cannot be shown"));
 }

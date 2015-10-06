@@ -100,6 +100,7 @@ webcoregtk_cppflags += \
 	-I$(srcdir)/Source/WebCore/platform/cairo \
 	-I$(srcdir)/Source/WebCore/platform/graphics/cairo \
 	-I$(srcdir)/Source/WebCore/platform/graphics/gstreamer \
+	-I$(srcdir)/Source/WebCore/platform/graphics/elis \
 	-I$(srcdir)/Source/WebCore/platform/graphics/gtk \
 	-I$(srcdir)/Source/WebCore/platform/gtk \
 	-I$(srcdir)/Source/WebCore/platform/network/soup
@@ -183,12 +184,12 @@ endif # END ENABLE_OFFLINE_WEB_APPLICATIONS
 # ----
 # Database Support
 # ----
-if ENABLE_DATABASE
-FEATURE_DEFINES += ENABLE_DATABASE=1
-webcore_cppflags += -DENABLE_DATABASE=1
+if ENABLE_SQL_DATABASE
+FEATURE_DEFINES += ENABLE_SQL_DATABASE=1
+webcore_cppflags += -DENABLE_SQL_DATABASE=1
 else
-webcore_cppflags += -DENABLE_DATABASE=0
-endif # END ENABLE_DATABASE
+webcore_cppflags += -DENABLE_SQL_DATABASE=0
+endif # END ENABLE_SQL_DATABASE
 
 # ----
 # HTML5 datalist Support
@@ -206,16 +207,6 @@ if ENABLE_DATA_TRANSFER_ITEMS
 FEATURE_DEFINES += ENABLE_DATA_TRANSFER_ITEMS=1
 webcore_cppflags += -DENABLE_DATA_TRANSFER_ITEMS=1
 endif # END ENABLE_DATA_TRANSFER_ITEMS
-
-# ----
-# HTML5 server-sent events
-# ----
-if !ENABLE_EVENTSOURCE
-global_cppflags += -DENABLE_EVENTSOURCE=0
-else
-FEATURE_DEFINES += ENABLE_EVENTSOURCE=1
-webcore_cppflags += -DENABLE_EVENTSOURCE=1
-endif # ENABLE_EVENTSOURCE
 
 # ----
 # Indexed Database API support
@@ -334,6 +325,12 @@ webcore_libadd += \
 	-lgstapp-0.10
 endif # END USE_GSTREAMER
 endif # END ENABLE_VIDEO
+
+if ENABLE_ELIS_MEDIA
+FEATURE_DEFINES += ENABLE_ELIS_MEDIA=1
+webcore_cppflags += -DENABLE_ELIS_MEDIA=1
+
+endif # END ENABLE_ELIS_MEDIA
 
 # ----
 # Media Source Support
@@ -503,18 +500,6 @@ if ENABLE_SVG_FONTS
 FEATURE_DEFINES += ENABLE_SVG_FONTS=1
 SVG_FEATURES += ENABLE_SVG_FONTS=1
 webcore_cppflags += -DENABLE_SVG_FONTS=1
-endif
-
-if ENABLE_SVG_AS_IMAGE
-FEATURE_DEFINES += ENABLE_SVG_AS_IMAGE=1
-SVG_FEATURES += ENABLE_SVG_AS_IMAGE=1
-webcore_cppflags += -DENABLE_SVG_AS_IMAGE=1
-endif
-
-if ENABLE_SVG_ANIMATION
-FEATURE_DEFINES += ENABLE_SVG_ANIMATION=1
-SVG_FEATURES += ENABLE_SVG_ANIMATION=1
-webcore_cppflags += -DENABLE_SVG_ANIMATION=1
 endif
 
 endif # END ENABLE_SVG
@@ -794,6 +779,8 @@ libWebCore_la_CPPFLAGS = \
 	$(GLIB_CFLAGS) \
 	$(GSTREAMER_CFLAGS) \
 	$(LIBSOUP_CFLAGS) \
+	$(ATK_CFLAGS) \
+	$(GTK_CFLAGS) \
 	$(LIBXML_CFLAGS) \
 	$(LIBXSLT_CFLAGS) \
 	$(SQLITE3_CFLAGS) \
@@ -958,10 +945,10 @@ ${GENSOURCES_INSPECTOR}/inspector.html: $(WebCore)/inspector/front-end/*.html \
 		DerivedSources/WebCore/InspectorBackendStub.js \
 		$(WebCore)/English.lproj/localizedStrings.js
 	$(AM_V_GEN)mkdir -p ${GENSOURCES_INSPECTOR}/UglifyJS
-	$(AM_V_GEN)mkdir -p ${GENSOURCES_INSPECTOR}/images
+	$(AM_V_GEN)mkdir -p ${GENSOURCES_INSPECTOR}/Images
 	$(AM_V_at)cp ${dist_webinspector_DATA} ${GENSOURCES_INSPECTOR}
 	$(AM_V_at)cp ${dist_webinspectoruglifyjs_DATA} ${GENSOURCES_INSPECTOR}/UglifyJS
-	$(AM_V_at)cp ${dist_webinspectorimages_DATA} ${GENSOURCES_INSPECTOR}/images
+	$(AM_V_at)cp ${dist_webinspectorimages_DATA} ${GENSOURCES_INSPECTOR}/Images
 
 webresourcesdir = ${datadir}/webkitgtk-@WEBKITGTK_API_VERSION@/images
 dist_webresources_DATA = \

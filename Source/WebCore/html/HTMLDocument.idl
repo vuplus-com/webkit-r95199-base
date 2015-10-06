@@ -50,7 +50,7 @@ module html {
                  attribute [ConvertNullToNullString] DOMString designMode;
         readonly attribute DOMString compatMode;
 
-        readonly attribute Element activeElement;
+ //       readonly attribute Element activeElement;	--> to Document.idl
         boolean hasFocus();
 
         // Deprecated attributes

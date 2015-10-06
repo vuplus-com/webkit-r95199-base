@@ -227,8 +227,10 @@ private:
 
     virtual void performTask(ScriptExecutionContext*)
     {
+#if ENABLE(INSPECTOR)		
         if (WorkerContextProxy::PageInspector* pageInspector = m_messagingProxy->m_pageInspector)
             pageInspector->dispatchMessageFromWorker(m_message);
+#endif		
     }
 
     WorkerMessagingProxy* m_messagingProxy;

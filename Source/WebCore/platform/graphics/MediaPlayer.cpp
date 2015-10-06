@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#if ENABLE(VIDEO)
+#if ENABLE_VIDEO
 #include "MediaPlayer.h"
 
 #include "ContentType.h"
@@ -45,6 +45,10 @@
 
 #if USE(GSTREAMER)
 #include "MediaPlayerPrivateGStreamer.h"
+#endif
+
+#if ENABLE(ELIS_MEDIA)
+#include "MediaPlayerPrivateElisIPC.h"
 #endif
 
 #if PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))
@@ -196,6 +200,11 @@ static Vector<MediaPlayerFactory*>& installedMediaEngines()
         MediaPlayerPrivateGStreamer::registerMediaEngine(addMediaEngine);
 #endif
 
+
+#if ENABLE(ELIS_MEDIA)
+        MediaPlayerPrivateElisIPC::registerMediaEngine(addMediaEngine);
+#endif
+
 #if USE(AVFOUNDATION)
         if (Settings::isAVFoundationEnabled()) {
 #if PLATFORM(MAC)
@@ -245,18 +254,27 @@ static const AtomicString& codecs()
 static MediaPlayerFactory* bestMediaEngineForTypeAndCodecs(const String& type, const String& codecs, MediaPlayerFactory* current)
 {
     if (type.isEmpty())
+    {
+    	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
         return 0;
+    }
 
     Vector<MediaPlayerFactory*>& engines = installedMediaEngines();
     if (engines.isEmpty())
+    {
+    	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
         return 0;
+    }
 
     // 4.8.10.3 MIME types - In the absence of a specification to the contrary, the MIME type "application/octet-stream" 
     // when used with parameters, e.g. "application/octet-stream;codecs=theora", is a type that the user agent knows 
     // it cannot render.
     if (type == applicationOctetStream()) {
         if (!codecs.isEmpty())
+        {
+        	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
             return 0;
+        }
     }
 
     MediaPlayerFactory* engine = 0;
@@ -349,7 +367,7 @@ bool MediaPlayer::load(const String& url, const ContentType& contentType)
             }
         }
     }
-
+    fprintf( stderr, "%s %s %d url %s\n", __FILE__, __func__, __LINE__, url.utf8().data() );
     m_url = url;
     m_contentMIMEType = type;
     m_contentTypeCodecs = typeCodecs;

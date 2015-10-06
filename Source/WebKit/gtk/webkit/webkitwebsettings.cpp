@@ -179,7 +179,8 @@ static String webkitUserAgent()
 
     DEFINE_STATIC_LOCAL(const String, uaVersion, (makeString(String::number(WEBKIT_USER_AGENT_MAJOR_VERSION), '.', String::number(WEBKIT_USER_AGENT_MINOR_VERSION), '+')));
     DEFINE_STATIC_LOCAL(const String, staticUA, (makeString("Mozilla/5.0 (", webkitPlatform(), webkitOSVersion(), ") AppleWebKit/", uaVersion) +
-                                                 makeString(" (KHTML, like Gecko) Version/5.0 Safari/", uaVersion)));
+                                                makeString(" (KHTML, like Gecko) Version/5.0") + makeString( "HbbTV/1.1.1 (+DL+PVR;;;;;) CE-HTML/1.0" )));
+//	  DEFINE_STATIC_LOCAL(const String, staticUA, (makeString( "HbbTV/1.1.1 (+DL+PVR;;;;;)  CE-HTML/1.0 hdplusinteraktiv/1.0 (NETRANGEMMH;) TechnoTrend Goerler" ) ) );
 
     return staticUA;
 }

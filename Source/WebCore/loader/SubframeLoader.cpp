@@ -54,6 +54,8 @@
 #include "RenderVideo.h"
 #endif
 
+#include "HTMLObjectElement.h"
+
 namespace WebCore {
     
 using namespace HTMLNames;
@@ -121,6 +123,29 @@ bool SubframeLoader::requestPlugin(HTMLPlugInImageElement* ownerElement, const K
     ASSERT(ownerElement->hasTagName(objectTag) || ownerElement->hasTagName(embedTag));
     return loadPlugin(ownerElement, url, mimeType, paramNames, paramValues, useFallback);
 }
+
+
+bool SubframeLoader::requestPluginWithoutRenderer(HTMLPlugInImageElement* ownerElement, const KURL& url, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback)
+{
+    Settings* settings = m_frame->settings();
+    if ((!allowPlugins(AboutToInstantiatePlugin)
+         // Application plug-ins are plug-ins implemented by the user agent, for example Qt plug-ins,
+         // as opposed to third-party code such as Flash. The user agent decides whether or not they are
+         // permitted, rather than WebKit.
+         && !MIMETypeRegistry::isApplicationPluginMIMEType(mimeType))
+        || (!settings->isJavaEnabled() && MIMETypeRegistry::isJavaAppletMIMEType(mimeType)))
+        return NULL;
+
+    if (m_frame->document()) {
+        if (m_frame->document()->securityOrigin()->isSandboxed(SandboxPlugins))
+            return NULL;
+        if (!m_frame->document()->contentSecurityPolicy()->allowObjectFromSource(url))
+            return NULL;
+    }
+
+    ASSERT(ownerElement->hasTagName(objectTag) || ownerElement->hasTagName(embedTag));
+    return loadPluginWithoutRenderer(ownerElement, url, mimeType, paramNames, paramValues, useFallback);
+}
  
 bool SubframeLoader::requestObject(HTMLPlugInImageElement* ownerElement, const String& url, const AtomicString& frameName, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues)
 {
@@ -145,6 +170,20 @@ bool SubframeLoader::requestObject(HTMLPlugInImageElement* ownerElement, const S
     // it will create a new frame and set it as the RenderPart's widget, causing what was previously 
     // in the widget to be torn down.
     return loadOrRedirectSubframe(ownerElement, completedURL, frameName, true, true);
+}
+
+
+bool SubframeLoader::requestObjectWithoutRenderer(HTMLPlugInImageElement* ownerElement, const String& url, const AtomicString& frameName, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues)
+{
+    if (url.isEmpty() && mimeType.isEmpty())
+        return false;
+
+    KURL completedURL;
+    if (!url.isEmpty())
+        completedURL = completeURL(url);
+
+    bool useFallback;
+    return requestPluginWithoutRenderer(ownerElement, completedURL, mimeType, paramNames, paramValues, useFallback);
 }
 
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
@@ -359,20 +398,70 @@ bool SubframeLoader::loadPlugin(HTMLPlugInImageElement* pluginElement, const KUR
 
     IntSize contentSize(renderer->contentWidth(), renderer->contentHeight());
     bool loadManually = document()->isPluginDocument() && !m_containsPlugins && toPluginDocument(document())->shouldLoadPluginManually();
-    RefPtr<Widget> widget = frameLoader->client()->createPlugin(contentSize,
+    RefPtr<Widget> widget;
+
+	widget = pluginElement->getPredefinedWidget();
+
+	if( !widget )
+	{
+	 widget = frameLoader->client()->createPlugin(contentSize,
         pluginElement, url, paramNames, paramValues, mimeType, loadManually);
+	}
+	else
+	{
+		widget->setParent( NULL );	// to avoid ASSERT
+	}
 
     if (!widget) {
+		fprintf( stderr, "%s %s %d MimeType %s\n", __FILE__, __func__, __LINE__, mimeType.utf8().data() );
         renderer->setShowsMissingPluginIndicator();
         return false;
     }
 
     renderer->setWidget(widget);
+	
+	pluginElement->setWidget( widget );
+
     m_containsPlugins = true;
  
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO) || ENABLE(3D_PLUGIN)
     pluginElement->setNeedsStyleRecalc(SyntheticStyleChange);
 #endif
+    return true;
+}
+
+
+bool SubframeLoader::loadPluginWithoutRenderer(HTMLPlugInImageElement* pluginElement, const KURL& url, const String& mimeType,
+    const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback)
+{
+	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
+	
+    if (!document()->securityOrigin()->canDisplay(url)) {
+        FrameLoader::reportLocalLoadFailed(m_frame, url.string());
+        return NULL;
+    }
+
+    if (!document()->contentSecurityPolicy()->allowObjectFromSource(url))
+        return NULL;
+
+    FrameLoader* frameLoader = m_frame->loader();
+    if (!frameLoader->checkIfRunInsecureContent(document()->securityOrigin(), url))
+        return NULL;
+
+    IntSize contentSize( 0, 0 );
+	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
+
+    bool loadManually = document()->isPluginDocument() && !m_containsPlugins && toPluginDocument(document())->shouldLoadPluginManually();
+	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
+
+    RefPtr<Widget> widget = frameLoader->client()->createPlugin(contentSize,
+        pluginElement, url, paramNames, paramValues, mimeType, loadManually);
+
+
+	pluginElement->setWidget( widget );
+
+    m_containsPlugins = true;
+ 
     return true;
 }
 

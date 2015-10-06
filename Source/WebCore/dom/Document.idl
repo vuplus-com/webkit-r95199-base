@@ -344,6 +344,8 @@ module core {
         readonly attribute [Conditional=PAGE_VISIBILITY_API] DOMString webkitVisibilityState;
         readonly attribute [Conditional=PAGE_VISIBILITY_API] boolean webkitHidden;
 
+        readonly attribute Element activeElement;  // From HTMLDocument.idl
+
     };
 
 }

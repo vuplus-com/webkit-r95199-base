@@ -246,7 +246,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-// #define INSTRUMENT_LAYOUT_SCHEDULING 1
+ #define INSTRUMENT_LAYOUT_SCHEDULING 1
 
 static const unsigned cMaxWriteRecursionDepth = 21;
 
@@ -445,6 +445,7 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
 #endif
     , m_loadEventDelayCount(0)
     , m_loadEventDelayTimer(this, &Document::loadEventDelayTimerFired)
+    , m_stylesheetCalcTimer(this, &Document::stylesheetCalcTimer)
     , m_directionSetOnDocumentElement(false)
     , m_writingModeSetOnDocumentElement(false)
     , m_writeRecursionIsTooDeep(false)
@@ -573,10 +574,6 @@ Document::~Document()
         for (size_t i = 0; i < m_userSheets->size(); ++i)
             (*m_userSheets)[i]->clearOwnerNode();
     }
-
-#if ENABLE(FULLSCREEN_API)
-    m_fullScreenChangeEventTargetQueue.clear();
-#endif
 
     deleteRetiredCustomFonts();
 
@@ -944,7 +941,7 @@ PassRefPtr<Node> Document::adoptNode(PassRefPtr<Node> source, ExceptionCode& ec)
                 ec = HIERARCHY_REQUEST_ERR;
                 return 0;
             }
-            iframe->setRemainsAliveOnRemovalFromTree(attached() && source->attached());
+            iframe->setRemainsAliveOnRemovalFromTree(attached() && source->attached() && iframe->canRemainAliveOnRemovalFromTree());
         }
 
         if (source->parentNode())
@@ -1828,6 +1825,9 @@ void Document::detach()
     clearAXObjectCache();
     stopActiveDOMObjects();
     m_eventQueue->close();
+#if ENABLE(FULLSCREEN_API)
+    m_fullScreenChangeEventTargetQueue.clear();
+#endif
 
 #if ENABLE(REQUEST_ANIMATION_FRAME)
     // FIXME: consider using ActiveDOMObject.
@@ -4564,7 +4564,7 @@ void Document::setSecurityOrigin(SecurityOrigin* securityOrigin)
     initDNSPrefetch();
 }
 
-#if ENABLE(DATABASE)
+#if ENABLE(SQL_DATABASE)
 
 bool Document::allowDatabaseAccess() const
 {
@@ -4877,6 +4877,9 @@ void Document::webkitWillEnterFullScreenForElement(Element* element)
     ASSERT(element);
     ASSERT(page() && page()->settings()->fullScreenEnabled());
 
+    if (m_fullScreenRenderer)
+        m_fullScreenRenderer->unwrapRenderer();
+
     m_fullScreenElement = element;
 
     // Create a placeholder block for a the full-screen element, to keep the page from reflowing
@@ -4891,7 +4894,7 @@ void Document::webkitWillEnterFullScreenForElement(Element* element)
     }
 
     if (m_fullScreenElement != documentElement())
-        m_fullScreenElement->detach();
+        RenderFullScreen::wrapRenderer(renderer, this);
 
     m_fullScreenElement->setContainsFullScreenElementOnAncestorsCrossingFrameBoundaries(true);
     
@@ -4942,15 +4945,11 @@ void Document::webkitDidExitFullScreenForElement(Element*)
 {
     m_areKeysEnabledInFullScreen = false;
     setAnimatingFullScreen(false);
-
-    if (m_fullScreenRenderer)
-        m_fullScreenRenderer->remove();
     
-    if (m_fullScreenElement != documentElement())
-        m_fullScreenElement->detach();
+    if (m_fullScreenRenderer)
+        m_fullScreenRenderer->unwrapRenderer();
 
     m_fullScreenChangeEventTargetQueue.append(m_fullScreenElement.release());
-    setFullScreenRenderer(0);
 #if USE(ACCELERATED_COMPOSITING)
     page()->chrome()->client()->setRootFullScreenLayer(0);
 #endif
@@ -5168,5 +5167,64 @@ DocumentLoader* Document::loader() const
     
     return loader;
 }
+
+void Document::stylesheetCalcTimer(Timer<Document>*)
+{	
+#ifdef INSTRUMENT_LAYOUT_SCHEDULING
+	if (!ownerElement())
+		printf("Stylesheet loaded at time %d. %d stylesheets still remain.\n", elapsedTime(), m_pendingStylesheets);
+#endif
+
+	if (m_pendingStylesheets)
+		return;
+
+	styleSelectorChanged(RecalcStyleImmediately);
+
+	if (ScriptableDocumentParser* parser = scriptableDocumentParser())
+		parser->executeScriptsWaitingForStylesheets();
+
+	if (m_gotoAnchorNeededAfterStylesheetsLoad && view())
+		view()->scrollToFragment(m_url);
+}
+
+void Document::asyncRemovePendingSheet()
+{
+	ASSERT(m_pendingStylesheets > 0);
+
+	m_pendingStylesheets--;
+	
+    if (frame() && !m_stylesheetCalcTimer.isActive())
+        m_stylesheetCalcTimer.startOneShot(0);	
+}
+
+
+/* From HTMLDocument.cpp */
+static Node* focusedFrameOwnerElement(Frame* focusedFrame, Frame* currentFrame)
+{
+    for (; focusedFrame; focusedFrame = focusedFrame->tree()->parent()) {
+        if (focusedFrame->tree()->parent() == currentFrame)
+            return focusedFrame->ownerElement();
+    }
+    return 0;
+}
+
+Element* Document::activeElement()
+{
+    Node* node = focusedNode();
+    if (!node && page())
+        node = focusedFrameOwnerElement(page()->focusController()->focusedFrame(), frame());
+    if (!node)
+        return body();
+    ASSERT(node->document() == this);
+    while (node->treeScope() != this) {
+        node = node->parentOrHostNode();
+        ASSERT(node);
+    }
+    if (node->isElementNode())
+        return toElement(node);
+    return body();
+}
+/* From HTMLDocument.cpp */
+
 
 } // namespace WebCore

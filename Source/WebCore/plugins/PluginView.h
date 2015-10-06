@@ -260,6 +260,14 @@ namespace WebCore {
 #endif
 #endif
 
+		enum
+		{
+			OIPF_TYPE_UNDEFINED = 0,
+			OIPF_TYPE_NO_OIPF,
+			OIPF_TYPE_NO_DISPLAY,
+			OIPF_TYPE_DISPLAY,
+		};
+
     private:
         PluginView(Frame* parentFrame, const IntSize&, PluginPackage*, Element*, const KURL&, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually);
 
@@ -409,12 +417,15 @@ private:
 #endif
 
 #if defined(XP_UNIX) && ENABLE(NETSCAPE_PLUGIN_API)
+#if PLATFORM(X11)
         bool m_hasPendingGeometryChange;
         Pixmap m_drawable;
         Visual* m_visual;
         Colormap m_colormap;
         Display* m_pluginDisplay;
-
+#elif defined(GDK_WINDOWING_DIRECTFB)
+		GdkPixmap *m_pixmap;
+#endif
         void initXEvent(XEvent* event);
 #endif
 
@@ -450,6 +461,7 @@ private:
         bool m_isJavaScriptPaused;
 
         bool m_haveCalledSetWindow;
+		int m_oipfType;
 
         static PluginView* s_currentPluginView;
     };

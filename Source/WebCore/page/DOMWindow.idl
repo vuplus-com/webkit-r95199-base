@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -166,7 +167,7 @@ module window {
 #if defined(ENABLE_OFFLINE_WEB_APPLICATIONS) && ENABLE_OFFLINE_WEB_APPLICATIONS
         readonly attribute [EnabledAtRuntime] DOMApplicationCache applicationCache;
 #endif    
-#if defined(ENABLE_DATABASE) && ENABLE_DATABASE
+#if defined(ENABLE_SQL_DATABASE) && ENABLE_SQL_DATABASE
         [EnabledAtRuntime] Database openDatabase(in DOMString name, in DOMString version, in DOMString displayName, in unsigned long estimatedSize, in [Callback, Optional] DatabaseCallback creationCallback)
             raises(DOMException);
 #endif
@@ -214,6 +215,8 @@ module window {
         // cross-document messaging
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
         [DoNotCheckDomainSecurity, Custom] void postMessage(in SerializedScriptValue message, in [Optional] Array messagePorts, in DOMString targetOrigin)
+            raises(DOMException);
+        [DoNotCheckDomainSecurity, Custom] void webkitPostMessage(in SerializedScriptValue message, in [Optional] Array transferList, in DOMString targetOrigin)
             raises(DOMException);
 #else
         // There's no good way to expose an array via the ObjC bindings, so for now just allow passing in a single port.
@@ -524,6 +527,7 @@ module window {
         attribute ErrorEventConstructor ErrorEvent;
         attribute HashChangeEventConstructor HashChangeEvent;
         attribute KeyboardEventConstructor KeyboardEvent;
+        attribute KeyEventConstructor KeyEvent;        
         attribute MessageEventConstructor MessageEvent;
         attribute MouseEventConstructor MouseEvent;
         attribute MutationEventConstructor MutationEvent;
@@ -568,9 +572,7 @@ module window {
         attribute RangeConstructor Range;
         attribute RangeExceptionConstructor RangeException;
 
-#if ENABLE_EVENTSOURCE
         attribute [JSCCustomGetter] EventSourceConstructor EventSource; // Usable with new the operator
-#endif
 
         // Mozilla has a separate XMLDocument object for XML documents. 
         // We just use Document for this.
@@ -734,14 +736,12 @@ module window {
         attribute SVGViewElementConstructor SVGViewElement;
 //      attribute SVGViewSpecConstructor SVGViewSpec;
 
-#if defined(ENABLE_SVG_ANIMATION) && ENABLE_SVG_ANIMATION
         attribute SVGAnimateColorElementConstructor SVGAnimateColorElement;
         attribute SVGAnimateElementConstructor SVGAnimateElement;
         attribute SVGAnimateMotionElementConstructor SVGAnimateMotionElement;
         attribute SVGAnimateTransformElementConstructor SVGAnimateTransformElement;
         attribute SVGMPathElementConstructor SVGMPathElement;
         attribute SVGSetElementConstructor SVGSetElement;
-#endif
 
 #if defined(ENABLE_SVG_FONTS) && ENABLE_SVG_FONTS
         attribute SVGAltGlyphDefElementConstructor SVGAltGlyphDefElement;
@@ -792,7 +792,7 @@ module window {
 #endif
 #endif
 
-        attribute [Conditional=DATABASE] SQLExceptionConstructor SQLException;
+        attribute [Conditional=SQL_DATABASE] SQLExceptionConstructor SQLException;
 
 
         attribute DOMFormDataConstructor FormData;
@@ -814,6 +814,178 @@ module window {
         // window.toString() requires special handling in V8
         [V8DoNotCheckSignature, DoNotCheckDomainSecurity, Custom, DontEnum] DOMString toString();
 #endif // defined(V8_BINDING)
+
+		const 		 unsigned long 	   VK_UNDEFINED = 0;
+		const 		 unsigned long 	   VK_CANCEL = 3;
+		const 		 unsigned long 	   VK_BACK_SPACE = 8;
+		const 		 unsigned long 	   VK_TAB = 9;
+		const 		 unsigned long 	   VK_CLEAR = 12;
+		const 		 unsigned long 	   VK_ENTER = 13;
+		const 		 unsigned long 	   VK_SHIFT = 16;
+		const 		 unsigned long 	   VK_CONTROL = 17;
+		const 		 unsigned long 	   VK_ALT = 18;
+		const 		 unsigned long 	   VK_PAUSE = 19;
+		const 		 unsigned long 	   VK_CAPS_LOCK = 20;
+		const 		 unsigned long 	   VK_KANA = 21;
+		const 		 unsigned long 	   VK_FINAL = 24;
+		const 		 unsigned long 	   VK_KANJI = 25;
+		const 		 unsigned long 	   VK_ESCAPE = 27;
+		const 		 unsigned long 	   VK_CONVERT = 28;
+		const 		 unsigned long 	   VK_NONCONVERT = 29;
+		const 		 unsigned long 	   VK_ACCEPT = 30;
+		const 		 unsigned long 	   VK_MODECHANGE = 31;
+		const 		 unsigned long 	   VK_SPACE = 32;
+		const 		 unsigned long 	   VK_PAGE_UP = 33;
+		const 		 unsigned long 	   VK_PAGE_DOWN = 34;
+		const 		 unsigned long 	   VK_END = 35;
+		const 		 unsigned long 	   VK_HOME = 36;
+		const 		 unsigned long 	   VK_LEFT = 37;
+		const 		 unsigned long 	   VK_UP = 38;
+		const 		 unsigned long 	   VK_RIGHT = 39;
+		const 		 unsigned long 	   VK_DOWN = 40;
+		const 		 unsigned long 	   VK_COMMA = 44;
+		const 		 unsigned long 	   VK_PERIOD = 46;
+		const 		 unsigned long 	   VK_SLASH = 47;
+		const 		 unsigned long 	   VK_0 = 48;
+		const 		 unsigned long 	   VK_1 = 49;
+		const 		 unsigned long 	   VK_2 = 50;
+		const 		 unsigned long 	   VK_3 = 51;
+		const 		 unsigned long 	   VK_4 = 52;
+		const 		 unsigned long 	   VK_5 = 53;
+		const 		 unsigned long 	   VK_6 = 54;
+		const 		 unsigned long 	   VK_7 = 55;
+		const 		 unsigned long 	   VK_8 = 56;
+		const 		 unsigned long 	   VK_9 = 57;
+		const 		 unsigned long 	   VK_SEMICOLON = 59;
+		const 		 unsigned long 	   VK_EQUALS = 61;
+		const 		 unsigned long 	   VK_A = 65;
+		const 		 unsigned long 	   VK_B = 66;
+		const 		 unsigned long 	   VK_C = 67;
+		const 		 unsigned long 	   VK_D = 68;
+		const 		 unsigned long 	   VK_E = 69;
+		const 		 unsigned long 	   VK_F = 70;
+		const 		 unsigned long 	   VK_G = 71;
+		const 		 unsigned long 	   VK_H = 72;
+		const 		 unsigned long 	   VK_I = 73;
+		const 		 unsigned long 	   VK_J = 74;
+		const 		 unsigned long 	   VK_K = 75;
+		const 		 unsigned long 	   VK_L = 76;
+		const 		 unsigned long 	   VK_M = 77;
+		const 		 unsigned long 	   VK_N = 78;
+		const 		 unsigned long 	   VK_O = 79;
+		const 		 unsigned long 	   VK_P = 80;
+		const 		 unsigned long 	   VK_Q = 81;
+		const 		 unsigned long 	   VK_R = 82;
+		const 		 unsigned long 	   VK_S = 83;
+		const 		 unsigned long 	   VK_T = 84;
+		const 		 unsigned long 	   VK_U = 85;
+		const 		 unsigned long 	   VK_V = 86;
+		const 		 unsigned long 	   VK_W = 87;
+		const 		 unsigned long 	   VK_X = 88;
+		const 		 unsigned long 	   VK_Y = 89;
+		const 		 unsigned long 	   VK_Z = 90;
+		const 		 unsigned long 	   VK_OPEN_BRACKET = 91;
+		const 		 unsigned long 	   VK_BACK_SLASH = 92;
+		const 		 unsigned long 	   VK_CLOSE_BRACKET = 93;
+		const 		 unsigned long 	   VK_NUMPAD0 = 96;
+		const 		 unsigned long 	   VK_NUMPAD1 = 97;
+		const 		 unsigned long 	   VK_NUMPAD2 = 98;
+		const 		 unsigned long 	   VK_NUMPAD3 = 99;
+		const 		 unsigned long 	   VK_NUMPAD4 = 100;
+		const 		 unsigned long 	   VK_NUMPAD5 = 101;
+		const 		 unsigned long 	   VK_NUMPAD6 = 102;
+		const 		 unsigned long 	   VK_NUMPAD7 = 103;
+		const 		 unsigned long 	   VK_NUMPAD8 = 104;
+		const 		 unsigned long 	   VK_NUMPAD9 = 105;
+		const 		 unsigned long 	   VK_MULTIPLY = 106;
+		const 		 unsigned long 	   VK_ADD = 107;
+		const 		 unsigned long 	   VK_SEPARATER = 108;
+		const 		 unsigned long 	   VK_SUBTRACT = 109;
+		const 		 unsigned long 	   VK_DECIMAL = 110;
+		const 		 unsigned long 	   VK_DIVIDE = 111;
+		const 		 unsigned long 	   VK_F1 = 112;
+		const 		 unsigned long 	   VK_F2 = 113;
+		const 		 unsigned long 	   VK_F3 = 114;
+		const 		 unsigned long 	   VK_F4 = 115;
+		const 		 unsigned long 	   VK_F5 = 116;
+		const 		 unsigned long 	   VK_F6 = 117;
+		const 		 unsigned long 	   VK_F7 = 118;
+		const 		 unsigned long 	   VK_F8 = 119;
+		const 		 unsigned long 	   VK_F9 = 120;
+		const 		 unsigned long 	   VK_F10 = 121;
+		const 		 unsigned long 	   VK_F11 = 122;
+		const 		 unsigned long 	   VK_F12 = 123;
+		const 		 unsigned long 	   VK_DELETE = 127;
+		const 		 unsigned long 	   VK_NUM_LOCK = 144;
+		const 		 unsigned long 	   VK_SCROLL_LOCK = 145;
+		const 		 unsigned long 	   VK_PRINTSCREEN = 154;
+		const 		 unsigned long 	   VK_INSERT = 155;
+		const 		 unsigned long 	   VK_HELP = 156;
+		const 		 unsigned long 	   VK_META = 157;
+		const 		 unsigned long 	   VK_BACK_QUOTE = 192;
+		const 		 unsigned long 	   VK_QUOTE = 222;
+		const 		 unsigned long 	   VK_RED = 403;
+		const 		 unsigned long 	   VK_GREEN = 404;
+		const 		 unsigned long 	   VK_YELLOW = 405;
+		const 		 unsigned long 	   VK_BLUE = 406;
+		const 		 unsigned long 	   VK_GREY = 407;
+		const 		 unsigned long 	   VK_BROWN = 408;
+		const 		 unsigned long 	   VK_POWER = 409;
+		const 		 unsigned long 	   VK_DIMMER = 410;
+		const 		 unsigned long 	   VK_WINK = 411;
+		const 		 unsigned long 	   VK_REWIND = 412;
+		const 		 unsigned long 	   VK_STOP = 413;
+		const 		 unsigned long 	   VK_EJECT_TOGGLE = 414;
+		const 		 unsigned long 	   VK_PLAY = 415;
+		const 		 unsigned long 	   VK_RECORD = 416;
+		const 		 unsigned long 	   VK_FAST_FWD = 417;
+		const 		 unsigned long 	   VK_PLAY_SPEED_UP = 418;
+		const  unsigned long VK_PLAY_SPEED_DOWN = 419;
+		const  unsigned long VK_PLAY_SPEED_RESET = 420;
+		const  unsigned long VK_RECORD_SPEED_NEXT = 421;
+		const  unsigned long VK_GO_TO_START = 422;
+		const  unsigned long VK_GO_TO_END = 423;
+		const  unsigned long VK_TRACK_PREV = 424;
+		const  unsigned long VK_TRACK_NEXT = 425;
+		const  unsigned long VK_RANDOM_TOGGLE = 426;
+		const  unsigned long VK_CHANNEL_UP = 427;
+		const  unsigned long VK_CHANNEL_DOWN = 428;
+		const  unsigned long VK_STORE_FAVORITE_0 = 429;
+		const  unsigned long VK_STORE_FAVORITE_1 = 430;
+		const  unsigned long VK_STORE_FAVORITE_2 = 431;
+		const  unsigned long VK_STORE_FAVORITE_3 = 432;
+		const  unsigned long VK_RECALL_FAVORITE_0 = 433;
+		const  unsigned long VK_RECALL_FAVORITE_1 = 434;
+		const  unsigned long VK_RECALL_FAVORITE_2 = 435;
+		const  unsigned long VK_RECALL_FAVORITE_3 = 436;
+		const  unsigned long VK_CLEAR_FAVORITE_0 = 437;
+		const  unsigned long VK_CLEAR_FAVORITE_1 = 438;
+		const  unsigned long VK_CLEAR_FAVORITE_2 = 439;
+		const  unsigned long VK_CLEAR_FAVORITE_3 = 440;
+		const  unsigned long VK_SCAN_CHANNELS_TOGGLE = 441;
+		const  unsigned long VK_PINP_TOGGLE = 442;
+		const  unsigned long VK_SPLIT_SCREEN_TOGGLE = 443;
+		const  unsigned long VK_DISPLAY_SWAP = 444;
+		const  unsigned long VK_SCREEN_MODE_NEXT = 445;
+		const  unsigned long VK_VIDEO_MODE_NEXT = 446;
+		const  unsigned long VK_VOLUME_UP = 447;
+		const  unsigned long VK_VOLUME_DOWN = 448;
+		const  unsigned long VK_MUTE = 449;
+		const  unsigned long VK_SURROUND_MODE_NEXT = 450;
+		const  unsigned long VK_BALANCE_RIGHT = 451;
+		const  unsigned long VK_BALANCE_LEFT = 452;
+		const  unsigned long VK_FADER_FRONT = 453;
+		const  unsigned long VK_FADER_REAR = 454;
+		const  unsigned long VK_BASS_BOOST_UP = 455;
+		const  unsigned long VK_BASS_BOOST_DOWN = 456;
+		const  unsigned long VK_INFO = 457;
+		const  unsigned long VK_GUIDE = 458;
+		const  unsigned long VK_TELETEXT = 459;
+		const  unsigned long VK_SUBTITLE = 460;
+		const  unsigned long VK_BACK = 461;
+		const  unsigned long VK_MENU = 462;
+
+		void debug( in DOMString arg ); /* OIPF */
     };
 
 }

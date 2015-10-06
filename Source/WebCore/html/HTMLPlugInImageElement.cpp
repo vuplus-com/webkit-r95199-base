@@ -193,4 +193,9 @@ void HTMLPlugInImageElement::updateWidgetCallback(Node* n, unsigned)
     static_cast<HTMLPlugInImageElement*>(n)->updateWidgetIfNecessary();
 }
 
+PassRefPtr<Widget> HTMLPlugInImageElement::getPredefinedWidget()
+{
+	return 0;
+}
+
 } // namespace WebCore

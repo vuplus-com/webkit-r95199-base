@@ -48,6 +48,7 @@
 #include "Settings.h"
 #include "Text.h"
 #include "Widget.h"
+#include "FrameView.h"
 
 namespace WebCore {
 
@@ -58,7 +59,12 @@ inline HTMLObjectElement::HTMLObjectElement(const QualifiedName& tagName, Docume
     , FormAssociatedElement(form)
     , m_docNamedItem(true)
     , m_useFallbackContent(false)
+    , m_widget( 0 )
+    , m_oipfType( NO_OIPF_OBJ )
 {
+
+	fprintf( stderr, "HTMLObject Constructor this %x\n", this );
+
     ASSERT(hasTagName(objectTag));
     if (!this->form())
         setForm(findFormAncestor());
@@ -70,6 +76,21 @@ inline HTMLObjectElement::~HTMLObjectElement()
 {
     if (form())
         form()->removeFormElement(this);
+
+	fprintf( stderr, "HTMLObject Destructor %x\n", ( m_widget == 0 ) );
+	if( m_widget )
+	{
+		if( document() && document()->view() )
+		{
+			document()->view()->removeChild( m_widget.get() );
+		}
+		else
+		{
+			m_widget->setParent( NULL );
+		}
+		
+		m_widget = 0;
+	}
 }
 
 PassRefPtr<HTMLObjectElement> HTMLObjectElement::create(const QualifiedName& tagName, Document* document, HTMLFormElement* form, bool createdByParser)
@@ -96,6 +117,48 @@ void HTMLObjectElement::parseMappedAttribute(Attribute* attr)
             setNeedsWidgetUpdate(true);
         if (!isImageType() && m_imageLoader)
             m_imageLoader.clear();
+
+		/* oipfType */
+		
+		if (equalIgnoringCase( m_serviceType, "application/oipfobjectfactory") )
+		{
+			m_oipfType = OIPF_OBJ_FACTORY;
+		}
+		else if( equalIgnoringCase(serviceType(), "application/oipfapplicationmanager" ) )
+		{
+			m_oipfType = OIPF_APP_MANANGER;
+		}
+		else if( equalIgnoringCase(serviceType(), "application/oipfconfiguration"))
+		{
+			m_oipfType = OIPF_CONFIGURATION;
+		}
+		else if( equalIgnoringCase(serviceType(), "application/oipfcapabilities"))
+		{
+			m_oipfType = OIPF_CAPABILITIES;
+		}
+		else if( equalIgnoringCase(serviceType(), "application/oipfdrmagent"))
+		{
+			m_oipfType = OIPF_DRMAGENT;
+		}
+		else if( equalIgnoringCase(serviceType(), "video/broadcast") )
+		{
+			m_oipfType = OIPF_VIDEO_BC;
+		}
+		else if( equalIgnoringCase(serviceType(), "valups/system") )
+		{
+			m_oipfType = VALUPS_SYSTEM;
+		}
+		else if( equalIgnoringCase(serviceType(), "humax/portalprofile") )
+		{
+			m_oipfType = H_PORTAL_PROFILE;
+		}
+		else if( equalIgnoringCase(serviceType(), "video/mp4")
+			|| equalIgnoringCase(serviceType(), "video/mpeg")
+			|| equalIgnoringCase(serviceType(), "video/mpeg4")
+			|| equalIgnoringCase(serviceType(), "application/x-mpegURL"))
+		{
+			m_oipfType = OIPF_VIDEO_MPEG;
+		}		
     } else if (attr->name() == dataAttr) {
         m_url = stripLeadingAndTrailingHTMLSpaces(attr->value());
         if (renderer()) {
@@ -178,7 +241,8 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
         paramValues.append(p->value());
 
         // FIXME: url adjustment does not belong in this function.
-        if (url.isEmpty() && urlParameter.isEmpty() && (equalIgnoringCase(name, "src") || equalIgnoringCase(name, "movie") || equalIgnoringCase(name, "code") || equalIgnoringCase(name, "url")))
+        if (url.isEmpty() && urlParameter.isEmpty() && (equalIgnoringCase(name, "src") || 
+			equalIgnoringCase(name, "movie") || equalIgnoringCase(name, "code") || equalIgnoringCase(name, "url")|| equalIgnoringCase(name, "FileName")))
             urlParameter = stripLeadingAndTrailingHTMLSpaces(p->value());
         // FIXME: serviceType calculation does not belong in this function.
         if (serviceType.isEmpty() && equalIgnoringCase(name, "type")) {
@@ -279,15 +343,144 @@ bool HTMLObjectElement::hasValidClassId()
     if (shouldAllowQuickTimeClassIdQuirk())
         return true;
 
+    if (equalIgnoringCase(serviceType(), "application/x-oleobject")&&
+		equalIgnoringCase( classId(), "CLSID:22d6f312-b0f6-11d0-94ab-0080c74c7e95" ))
+    {
+        return true;	
+    }
+
+	
+
     // HTML5 says that fallback content should be rendered if a non-empty
     // classid is specified for which the UA can't find a suitable plug-in.
     return classId().isEmpty();
 }
 
+Widget* HTMLObjectElement::pluginWidget()
+{
+	if( m_widget && m_widget.get() )
+	{
+		return m_widget.get();
+	}
+	
+    return HTMLPlugInImageElement::pluginWidget();
+}
+
+
+void HTMLObjectElement::setWidget(PassRefPtr<Widget> widget)
+{	
+	if( m_oipfType == NO_OIPF_OBJ )
+	{
+		fprintf( stderr, "!!!!!! NO_OIPF_OBJ!!!!!!!\n" );
+		return;
+	}
+	
+    if ( widget == m_widget )
+        return;
+
+	m_widget = widget;
+}
+
+#define OIPF_HAS_NO_DISPLAY( a ) (( a == OIPF_APP_MANANGER ) ||\
+									( a == OIPF_CONFIGURATION ) || \
+									( a == OIPF_CAPABILITIES ) || \
+									( a == OIPF_DRMAGENT ) || \
+									( a == OIPF_OBJ_FACTORY ) || \
+									( a == VALUPS_SYSTEM ) || \
+									( a == H_PORTAL_PROFILE ) )
+
+void HTMLObjectElement::updateWidgetIfNecessary()
+{
+    document()->updateStyleIfNeeded();
+	
+//	fprintf( stderr, "serviceType = %s\n", m_serviceType.ascii().data() );
+
+    if ((!needsWidgetUpdate() || useFallbackContent() || isImageType()) &&
+		( m_oipfType == NO_OIPF_OBJ ) )
+    {
+        return;
+    }
+
+	if( m_oipfType != NO_OIPF_OBJ ) //( renderEmbeddedObject() == NULL && m_oipfType != NO_OIPF_OBJ ) || ( OIPF_HAS_NO_DISPLAY( m_oipfType ) ) )
+	{		
+		if( m_widget == 0 )
+		{
+			setNeedsWidgetUpdate(false);
+			// FIXME: This should ASSERT isFinishedParsingChildren() instead.
+			if (!isFinishedParsingChildren() && !OIPF_HAS_NO_DISPLAY( m_oipfType ) )
+			{
+				fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
+				return;
+			}
+			
+			String url = this->url();
+			String serviceType = this->serviceType();
+			
+			// FIXME: These should be joined into a PluginParameters class.
+			Vector<String> paramNames;
+			Vector<String> paramValues;
+			parametersForPlugin(paramNames, paramValues, url, serviceType);
+			
+			// Note: url is modified above by parametersForPlugin.
+			if (!allowedToLoadFrameURL(url))
+			{
+				fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );				
+				return;
+			}
+							
+			ASSERT(!m_inBeforeLoadEventHandler);
+			m_inBeforeLoadEventHandler = true;
+			bool beforeLoadAllowedLoad = dispatchBeforeLoadEvent(url);
+			m_inBeforeLoadEventHandler = false;
+			
+			// beforeload events can modify the DOM, potentially causing
+			// RenderWidget::destroy() to be called.  Ensure we haven't been
+			// destroyed before continuing.
+			// FIXME: Should this render fallback content?
+	//		if (!renderer())
+		//		return;
+			
+			RefPtr<HTMLObjectElement> protect(this); // Loading the plugin might remove us from the document.
+			SubframeLoader* loader = document()->frame()->loader()->subframeLoader();
+			fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
+			
+			if( beforeLoadAllowedLoad && hasValidClassId() )
+				loader->requestObjectWithoutRenderer(this, url, getAttribute(nameAttr), serviceType, paramNames, paramValues);
+
+			fprintf( stderr, "m_widget = %x\n", ( m_widget == 0 ) );
+
+			if( m_widget )
+			{
+				if( document() && document()->view() )
+				{
+					document()->view()->addChild( m_widget );
+				}
+			}
+		}
+				
+		return;		
+	}
+
+    if (!needsWidgetUpdate() || useFallbackContent() || isImageType())
+    {
+		fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );		
+        return;
+    }
+
+	return HTMLPlugInImageElement::updateWidgetIfNecessary();
+ }
+
+
 // FIXME: This should be unified with HTMLEmbedElement::updateWidget and
 // moved down into HTMLPluginImageElement.cpp
 void HTMLObjectElement::updateWidget(PluginCreationOption pluginCreationOption)
 {
+//	if(( m_oipfType != NO_OIPF_OBJ ))// OIPF_HAS_NO_DISPLAY( m_oipfType ) )
+//	{
+//		fprintf( stderr, "ERROR>>>>>>>>>>>>>>>>> oipfType = %d\n", m_oipfType );
+//		return;
+//	}
+	
     ASSERT(!renderEmbeddedObject()->pluginCrashedOrWasMissing());
     // FIXME: We should ASSERT(needsWidgetUpdate()), but currently
     // FrameView::updateWidget() calls updateWidget(false) without checking if
@@ -327,6 +520,7 @@ void HTMLObjectElement::updateWidget(PluginCreationOption pluginCreationOption)
     if (!renderer())
         return;
 
+    RefPtr<HTMLObjectElement> protect(this); // Loading the plugin might remove us from the document.
     SubframeLoader* loader = document()->frame()->loader()->subframeLoader();
     bool success = beforeLoadAllowedLoad && hasValidClassId() && loader->requestObject(this, url, getAttribute(nameAttr), serviceType, paramNames, paramValues);
 
@@ -340,9 +534,50 @@ bool HTMLObjectElement::rendererIsNeeded(const NodeRenderingContext& context)
     Frame* frame = document()->frame();
     if (!frame)
         return false;
+	fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
+
+	/* hbbtv Object for OIPF will be always rendered 
+    if (equalIgnoringCase(serviceType(), "application/oipfobjectfactory") 
+		|| equalIgnoringCase(serviceType(), "application/oipfapplicationmanager")
+		|| equalIgnoringCase(serviceType(), "application/oipfconfiguration")
+		|| equalIgnoringCase(serviceType(), "video/broadcast")
+		|| equalIgnoringCase(serviceType(), "video/mp4")
+		|| equalIgnoringCase(serviceType(), "video/mpeg")
+		|| equalIgnoringCase(serviceType(), "video/mpeg4")		
+		)
+    {
+		fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
+		return true;
+    }
+	/* hbbtv Object for OIPF will be always rendered */
+
+//	if( m_oipfType != NO_OIPF_OBJ &&
+//		m_widget )
+//	{
+//		fprintf( stderr, "Do not render - m_widget exists\n" );
+//		return false;
+//	}
 
     return HTMLPlugInImageElement::rendererIsNeeded(context);
 }
+
+PassRefPtr<Widget> HTMLObjectElement::getPredefinedWidget()
+{
+	return m_widget;
+}
+
+#if ENABLE(NETSCAPE_PLUGIN_API)
+
+NPObject* HTMLObjectElement::getNPObject()
+{
+	if( !document() || !document()->frame() )
+		return NULL;
+	
+	return HTMLPlugInElement::getNPObject();
+}
+
+#endif /* ENABLE(NETSCAPE_PLUGIN_API) */
+
 
 void HTMLObjectElement::insertedIntoDocument()
 {

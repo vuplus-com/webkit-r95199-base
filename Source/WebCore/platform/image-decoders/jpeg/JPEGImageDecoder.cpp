@@ -42,6 +42,18 @@
 #include <stdio.h>  // Needed by jpeglib.h for FILE.
 #include <wtf/PassOwnPtr.h>
 
+//#define ENABLE_JPEG_HW
+//#define ENABLE_RESIZE_JPEG
+
+#ifdef ENABLE_JPEG_HW
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <sys/mman.h>
+#include <sys/ioctl.h>
+#endif
+
 #if OS(WINCE) || PLATFORM(BREWMP_SIMULATOR)
 // Remove warning: 'FAR' macro redefinition
 #undef FAR
@@ -82,6 +94,8 @@ enum jstate {
 void init_source(j_decompress_ptr jd);
 boolean fill_input_buffer(j_decompress_ptr jd);
 void skip_input_data(j_decompress_ptr jd, long num_bytes);
+void custom_skip_input_data(j_decompress_ptr cinfo, long num_bytes);
+
 void term_source(j_decompress_ptr jd);
 void error_exit(j_common_ptr cinfo);
 
@@ -111,6 +125,9 @@ static ColorProfile readColorProfile(jpeg_decompress_struct* info)
 #endif
 }
 
+#define LOG_ERR( a... ) { fprintf( stderr, "ERR - " ); fprintf( stderr, ##a ); fprintf( stderr, " -> %s %d\n", __func__, __LINE__ );}
+#define LOG_TRACE( a... ) { fprintf( stderr, "TRACE - " ); fprintf( stderr, ##a ); fprintf( stderr, " -> %s %d\n", __func__, __LINE__); }
+
 class JPEGImageReader
 {
 public:
@@ -120,6 +137,7 @@ public:
         , m_bytesToSkip(0)
         , m_state(JPEG_HEADER)
         , m_samples(0)
+        , m_decode_hw( JPEG_HW_NO_INFO )
     {
         memset(&m_info, 0, sizeof(jpeg_decompress_struct));
  
@@ -153,6 +171,22 @@ public:
         // Apparently there are 16 of these markers.  I don't see anywhere in the header with this constant.
         for (unsigned i = 0; i < 0xF; ++i)
             jpeg_save_markers(&m_info, JPEG_APP0 + i, 0xFFFF);
+
+#ifdef ENABLE_JPEG_HW
+		/* jpeg hw - kdhong */
+		int fd = ::open( "/dev/jpegbuffer", O_RDWR );
+		if( fd <= 0 )
+		{
+			m_decode_hw = JPEG_SW;
+		}
+		else
+		{
+			::close( fd );
+		}
+
+		LOG_TRACE( "decode_hw = %d", m_decode_hw );
+		/* jpeg hw - kdhong */
+#endif		
     }
 
     ~JPEGImageReader()
@@ -238,8 +272,31 @@ public:
             // image is a sequential JPEG.
             m_info.buffered_image = jpeg_has_multiple_scans(&m_info);
 
-            // Used to set up image size so arrays can be allocated.
-            jpeg_calc_output_dimensions(&m_info);
+            // Used to set up image size so arrays can be allocated.			
+#ifdef ENABLE_RESIZE_JPEG            
+			m_info.scale_num = 1;
+			m_info.scale_denom = 1;
+			jpeg_calc_output_dimensions( &m_info );
+
+		  	LOG_TRACE( "MultiScans = %d output %dx %d", m_info.buffered_image, m_info.output_width, m_info.output_height );
+
+			while( m_info.output_width >= 2000 ||
+				m_info.output_height >= 2000 )
+			{
+				m_info.scale_num = 1;
+				m_info.scale_denom *= 2;
+
+				jpeg_calc_output_dimensions( &m_info );
+
+				/*
+					\todo
+					CHECK if denom is limited to 8 ???
+				*/
+				if( m_info.scale_denom == 4 ) break;
+			}			
+#else
+			jpeg_calc_output_dimensions( &m_info );
+#endif
 
             // Make a one-row-high sample array that will go away when done with
             // image. Always make it big enough to hold an RGB row.  Since this
@@ -250,7 +307,11 @@ public:
             m_state = JPEG_START_DECOMPRESS;
 
             // We can fill in the size now that the header is available.
-            if (!m_decoder->setSize(m_info.image_width, m_info.image_height))
+#ifdef ENABLE_RESIZE_JPEG                        
+            if (!m_decoder->setSize(m_info.output_width, m_info.output_height))
+#else
+			if (!m_decoder->setSize(m_info.image_width, m_info.image_height))
+#endif
                 return false;
 
             if (!m_decoder->ignoresGammaAndColorProfile())
@@ -269,7 +330,7 @@ public:
             // Set parameters for decompression.
             // FIXME -- Should reset dct_method and dither mode for final pass
             // of progressive JPEG.
-            m_info.dct_method =  JDCT_ISLOW;
+            m_info.dct_method =  JDCT_IFAST;
             m_info.dither_mode = JDITHER_FS;
             m_info.do_fancy_upsampling = true;
             m_info.enable_2pass_quant = false;
@@ -355,9 +416,443 @@ public:
         return true;
     }
 
+#ifdef ENABLE_JPEG_HW
+
+	struct my_error_mgr
+	{
+	  struct jpeg_error_mgr pub;	/* "public" fields */
+	
+	  jmp_buf setjmp_buffer;	/* for return to caller */
+	} __attribute__((packed));
+
+	/*
+	 * Here's the routine that will replace the standard error_exit method:
+	 */
+	METHODDEF(void)
+	sjpeg_error_exit (j_common_ptr pInfo)
+	{
+	  /* pInfo->err really points to a my_error_mgr struct, so coerce pointer */
+	  my_error_ptr myerr = (my_error_ptr) pInfo->err;
+	
+	  /* Always display the message. */
+	  /* We could postpone this until after returning, if we chose. */
+	  (*pInfo->err->output_message) (pInfo);
+	
+	  /* Return control to the setjmp point */
+	  longjmp(myerr->setjmp_buffer, 1);
+	}
+
+
+	
+	typedef struct my_error_mgr * my_error_ptr;
+
+	bool decodeHW( const SharedBuffer& data, bool isAllDataAvailable )
+	{
+		bool result = false;
+		
+		if( m_decode_hw == JPEG_HW_NO_INFO )
+		{
+			LOG_TRACE( "" );
+			struct jpeg_decompress_struct dinfo;
+			j_decompress_ptr cinfo = &dinfo;
+			int supported_chroma_subsampling = 0;
+			
+			memset(&dinfo, 0, sizeof(jpeg_decompress_struct));		
+
+			/* We set up the normal JPEG error routines, then override error_exit. */			
+			dinfo.err = jpeg_std_error(&m_err.pub);
+			m_err.pub.error_exit = error_exit;
+			
+			/* Establish the setjmp return context for my_error_exit to use. */
+			
+			LOG_TRACE( "" );
+
+			jpeg_create_decompress(&dinfo);
+
+			if (setjmp(m_err.setjmp_buffer))
+				return m_decoder->setFailed();
+
+			jpeg_stdio_src(&dinfo, NULL);
+
+			decoder_source_mgr src;
+			memcpy( &src.pub, dinfo.src, sizeof( jpeg_source_mgr ) );
+			
+			src.pub.init_source = init_source;			
+			src.pub.fill_input_buffer = fill_input_buffer;
+			src.pub.skip_input_data = custom_skip_input_data;
+			src.pub.resync_to_restart = jpeg_resync_to_restart;
+			src.pub.term_source = dinfo.src->term_source;
+			src.decoder = this;
+			dinfo.src = (jpeg_source_mgr*)&src;
+
+			// Enable these markers for the ICC color profile.
+			// Apparently there are 16 of these markers.  I don't see anywhere in the header with this constant.
+			for (unsigned i = 0; i < 0xF; ++i)
+				jpeg_save_markers(&dinfo, JPEG_APP0 + i, 0xFFFF);
+			
+			/* Step 2: specify data source (eg, a file) */
+
+			LOG_TRACE( " %x %x ", data.size(), data.data() );
+
+			dinfo.src->bytes_in_buffer = data.size() ;
+			dinfo.src->next_input_byte = (JOCTET*)(data.data());
+			LOG_TRACE( " %x %x ", data.size(), data.data() );
+
+			/* Step 3: read file parameters with jpeg_read_header() */
+            if (jpeg_read_header(&dinfo, true) == JPEG_SUSPENDED)
+            {
+				LOG_TRACE( "" );				
+				(void) jpeg_destroy_decompress(&dinfo);				
+                return false; // I/O suspension.
+            }
+
+			LOG_TRACE( "" );
+
+			/* Step 4: set parameters for decompression */
+			dinfo.buffered_image = jpeg_has_multiple_scans( &dinfo );
+			dinfo.out_color_space = JCS_RGB;
+
+			dinfo.scale_num = 1;
+			dinfo.scale_denom = 1;
+			jpeg_calc_output_dimensions( &dinfo );
+
+			int orgWidth = dinfo.output_width;
+			int orgHeight = dinfo.output_height;
+
+			const int MAX_DIMENSION_FOR_HW = 4096*4096; /* 16MB */
+
+			if (cinfo->max_h_samp_factor == 2 && cinfo->max_v_samp_factor == 2 &&
+				cinfo->cur_comp_info[0]->h_samp_factor == 2 && cinfo->cur_comp_info[0]->v_samp_factor == 2 &&
+				cinfo->cur_comp_info[1]->h_samp_factor == 1 && cinfo->cur_comp_info[1]->v_samp_factor == 1 &&
+				cinfo->cur_comp_info[2]->h_samp_factor == 1 && cinfo->cur_comp_info[2]->v_samp_factor == 1)
+				supported_chroma_subsampling = 1;
+			
+			if (cinfo->max_h_samp_factor == 2 && cinfo->max_v_samp_factor == 1 &&
+				cinfo->cur_comp_info[0]->h_samp_factor == 2 && cinfo->cur_comp_info[0]->v_samp_factor == 1 &&
+				cinfo->cur_comp_info[1]->h_samp_factor == 1 && cinfo->cur_comp_info[1]->v_samp_factor == 1 &&
+				cinfo->cur_comp_info[2]->h_samp_factor == 1 && cinfo->cur_comp_info[2]->v_samp_factor == 1)
+				supported_chroma_subsampling = 2;
+
+
+			if( dinfo.buffered_image ||
+				orgWidth*orgHeight > MAX_DIMENSION_FOR_HW ||
+				supported_chroma_subsampling == 0 )
+			{
+				fprintf( stderr, "JPEG Image is not adaquate for HW decoding %d %d %d %d supported_chroma_subsampling %d\n",
+					dinfo.buffered_image, dinfo.jpeg_color_space, orgWidth, orgHeight, supported_chroma_subsampling );
+				m_decode_hw = JPEG_SW;
+			}
+			else
+			{
+				m_decode_hw = JPEG_HW;
+			}
+
+			LOG_TRACE( "" );
+			(void) jpeg_destroy_decompress(&dinfo);		
+			LOG_TRACE( "" );
+		}
+
+		LOG_TRACE( "m_decode_hw %d all data %d", m_decode_hw,  isAllDataAvailable );
+		if( m_decode_hw != JPEG_HW )
+			return false;
+
+		if( isAllDataAvailable == true )
+		{
+			LOG_TRACE( "" );			
+			/* Now start decode HW !! */
+			
+			struct jpeg_decompress_struct dinfo;
+			memset(&dinfo, 0, sizeof(jpeg_decompress_struct));		
+
+			/* We set up the normal JPEG error routines, then override error_exit. */			
+			dinfo.err = jpeg_std_error(&m_err.pub);
+			m_err.pub.error_exit = error_exit;
+			
+			/* Establish the setjmp return context for my_error_exit to use. */
+			
+			LOG_TRACE( "" );
+
+			jpeg_create_decompress(&dinfo);
+
+			if (setjmp(m_err.setjmp_buffer))
+				return m_decoder->setFailed();
+
+			jpeg_stdio_src(&dinfo, NULL);
+
+			decoder_source_mgr src;
+			memcpy( &src.pub, dinfo.src, sizeof( jpeg_source_mgr ) );
+			
+			src.pub.init_source = init_source;			
+			src.pub.fill_input_buffer = fill_input_buffer;
+			src.pub.skip_input_data = custom_skip_input_data;
+			src.pub.resync_to_restart = jpeg_resync_to_restart;
+			src.pub.term_source = dinfo.src->term_source;
+			src.decoder = this;
+			dinfo.src = (jpeg_source_mgr*)&src;
+
+			// Enable these markers for the ICC color profile.
+			// Apparently there are 16 of these markers.  I don't see anywhere in the header with this constant.
+			for (unsigned i = 0; i < 0xF; ++i)
+				jpeg_save_markers(&dinfo, JPEG_APP0 + i, 0xFFFF);
+
+			/* Step 2: specify data source (eg, a file) */
+
+			dinfo.src->bytes_in_buffer = data.size() ;
+			dinfo.src->next_input_byte = (JOCTET*)(data.data());
+
+			/* Step 3: read file parameters with jpeg_read_header() */
+			(void) jpeg_read_header(&dinfo, TRUE);
+
+
+			/* Step 4: set parameters for decompression */
+			dinfo.buffered_image = jpeg_has_multiple_scans( &dinfo );
+
+			int orgWidth = dinfo.output_width;
+			int orgHeight = dinfo.output_height;
+			dinfo.out_color_space = JCS_RGB;
+
+			/* Step 4-1: preprocess size */
+			dinfo.scale_num = 1;
+			dinfo.scale_denom = 1;
+			jpeg_calc_output_dimensions( &dinfo );
+		
+		
+			LOG_TRACE( "MultiScans = %d output %dx %d", dinfo.buffered_image, dinfo.output_width, dinfo.output_height );
+		
+			LOG_TRACE( "output_gamma = %f, dct_method = %d, do_fancy_upsampling = %d, do_block_smoothing = %d, quantize_colors = %d, dither_mode = %d, two_pass_quantize = %d, \
+			enable_1pass_quant = %d, enable_external_quant = %d, enable_2pass_quant = %d, data_precision = %d", dinfo.output_gamma,
+			dinfo.dct_method, dinfo.do_fancy_upsampling, dinfo.do_block_smoothing, dinfo.quantize_colors, dinfo.dither_mode, dinfo.two_pass_quantize,
+			dinfo.enable_1pass_quant, dinfo.enable_2pass_quant, dinfo.enable_external_quant, dinfo.data_precision );
+		
+		
+			while( dinfo.output_width >= 2000 ||
+				dinfo.output_height >= 2000 )
+			{
+				dinfo.scale_num = 1;
+				dinfo.scale_denom *= 2;
+			
+				/* TO DO */
+				dinfo.do_fancy_upsampling = 0;
+				dinfo.do_block_smoothing = 0;
+				/* TO DO */
+				LOG_TRACE( "" );
+			
+				jpeg_calc_output_dimensions( &dinfo );
+			
+				/*
+					\todo
+					CHECK if denom is limited to 8 ???
+				*/
+				if( dinfo.scale_denom == 4 ) break;
+			}
+
+			LOG_TRACE( "After Dimension : dct_method = %d, do_fancy_upsampling = %d, do_block_smoothing = %d, quantize_colors = %d, dither_mode = %d, two_pass_quantize = %d, \
+				enable_1pass_quant = %d, enable_external_quant = %d, enable_2pass_quant = %d, data_precision = %d",
+				dinfo.dct_method, dinfo.do_fancy_upsampling, dinfo.do_block_smoothing, dinfo.quantize_colors, dinfo.dither_mode, dinfo.two_pass_quantize,
+				dinfo.enable_1pass_quant, dinfo.enable_2pass_quant, dinfo.enable_external_quant, dinfo.data_precision );
+			
+			dinfo.out_color_space = (J_COLOR_SPACE)7;
+			dinfo.dct_method = (J_DCT_METHOD)4;//JDCT_ST231_HW;
+			
+			LOG_TRACE( "" );
+				
+			/* Step 5: Start decompressor */
+			int status = jpeg_start_decompress(&dinfo);
+		
+			LOG_TRACE( "jpeg_start_decompress = %d", status );
+					
+			int jpg_width = dinfo.output_width;
+			if( jpg_width % 4 )
+				jpg_width += ( 4 - jpg_width % 4 );
+		
+		
+			int bitmap_width = dinfo.output_width;
+			int bitmap_height = dinfo.output_height;
+	
+			while( bitmap_width >= 2000 ||
+				bitmap_height >= 2000 )
+			{
+				bitmap_width = bitmap_width / 2;
+				bitmap_height = bitmap_height / 2;
+			}
+			
+			
+			int length = data.size();
+			int alloc_length = length + 4096 - (length % 4096);
+			
+			LOG_TRACE( "Length = %d", length );
+
+			/* Allocate device buffer */
+			
+			int fd = ::open( "/dev/jpegbuffer", O_RDWR );
+
+			if( fd < 0 )
+			{				
+				(void) jpeg_finish_decompress(&dinfo);				
+				jpeg_destroy_decompress((struct jpeg_decompress_struct *)&dinfo);
+				m_decode_hw = JPEG_SW;
+				return false;
+			}
+
+#define JPEGBUFFER_IOC_ALLOC 	0x100
+#define JPEGBUFFER_IOC_FREE 	0x101
+#define JPEGBUFFER_IOC_SETMMAP	0x102
+				
+			
+			typedef struct
+			{
+				int mSize;
+				unsigned char* mPhysAddr;
+				unsigned int mHandle;
+					
+			}jpegbuffer_ioctl_arg;
+
+			jpegbuffer_ioctl_arg srcBuffer;
+			srcBuffer.mSize = alloc_length;
+			srcBuffer.mPhysAddr = NULL;
+
+			ioctl( fd, JPEGBUFFER_IOC_ALLOC, &srcBuffer );
+
+			if( srcBuffer.mPhysAddr == NULL )
+			{
+				LOG_ERR( "Can not allocate device memory" );
+				(void) jpeg_finish_decompress(&dinfo);	
+				jpeg_destroy_decompress((struct jpeg_decompress_struct *)&dinfo);				
+				m_decode_hw = JPEG_SW;
+				::close( fd );
+				return false;
+			}
+				
+			int width = (dinfo.output_width/dinfo.scale_denom + 15L) & ~15L;
+			int height =( dinfo.output_height + 15L) & ~15L;
+			
+			LOG_TRACE( "Width = %d Height = %d", width, height );
+
+			jpegbuffer_ioctl_arg dstBuffer;
+			dstBuffer.mSize = width*height*2;
+			dstBuffer.mPhysAddr = NULL;
+
+			ioctl( fd, JPEGBUFFER_IOC_ALLOC, &dstBuffer );
+
+			if( dstBuffer.mPhysAddr == NULL )
+			{
+				LOG_ERR( "Can not allocate device memory" );
+				(void) jpeg_finish_decompress(&dinfo);	
+				jpeg_destroy_decompress((struct jpeg_decompress_struct *)&dinfo);				
+				m_decode_hw = JPEG_SW;
+				ioctl( fd, JPEGBUFFER_IOC_FREE, &srcBuffer );
+				::close( fd );
+				return false;
+			}
+			
+			LOG_TRACE( "Start HW Decode" ); 
+
+			ioctl( fd, JPEGBUFFER_IOC_SETMMAP, &srcBuffer );
+						
+			/* copy */
+			unsigned char* mappedAddress_p = (unsigned char*)mmap( 0, srcBuffer.mSize,  PROT_READ | PROT_WRITE,  MAP_SHARED, 
+							fd, (unsigned int)0 );
+			
+			LOG_TRACE( "mapped Addr %x",  mappedAddress_p );
+
+			if( mappedAddress_p == NULL )
+			{
+				LOG_ERR( "Can not mmap device memory" );
+				(void) jpeg_finish_decompress(&dinfo);	
+				jpeg_destroy_decompress((struct jpeg_decompress_struct *)&dinfo);				
+				m_decode_hw = JPEG_SW;
+				ioctl( fd, JPEGBUFFER_IOC_FREE, &srcBuffer );
+				ioctl( fd, JPEGBUFFER_IOC_FREE, &dstBuffer );
+				::close( fd );		
+				return false;
+			}
+			LOG_TRACE( "" );
+
+			memcpy( mappedAddress_p, data.data(), data.size() );
+
+			LOG_TRACE( "" );
+			
+			dinfo.src->next_input_byte = srcBuffer.mPhysAddr;
+			dinfo.src->bytes_in_buffer = length;
+
+			void* physical = dstBuffer.mPhysAddr;
+			LOG_TRACE( "" );
+			
+			LOG_TRACE( "" );		
+			int scan_line = jpeg_read_scanlines( &dinfo, (JSAMPARRAY)&physical, dinfo.output_height );
+			LOG_TRACE( "scan line = %d", scan_line );
+			
+			if (dinfo.output_scanline == dinfo.output_height) 
+			{
+				result = true;
+				LOG_TRACE( "" );			
+ 				/*
+				STGXOBJ_Bitmap_t srcBitmap;
+				memset(&srcBitmap, 0, sizeof(srcBitmap));			
+				int width = dinfo.output_width;
+				int height = dinfo.output_height;
+				
+				srcBitmap.ColorType 		   = STGXOBJ_COLOR_TYPE_UNSIGNED_YCBCR888_420;
+				srcBitmap.BitmapType		   = STGXOBJ_BITMAP_TYPE_MB;
+				srcBitmap.ColorSpaceConversion = STGXOBJ_ITU_R_BT601;
+				srcBitmap.AspectRatio		   = STGXOBJ_ASPECT_RATIO_SQUARE;
+				srcBitmap.Width 			   = width;
+				srcBitmap.Height			   = height;
+				srcBitmap.Pitch 			   = width;
+				srcBitmap.Data1_p			   = (void*)buffer2->GetPhysicalAddress();
+				srcBitmap.Size1 			   = width * height;
+				srcBitmap.Data2_p			   = (unsigned char*)srcBitmap.Data1_p + width * height;
+				srcBitmap.Size2 			   = (width >> 1) * (height >> 1);
+				srcBitmap.Pitch2			   = (width >> 1);
+
+				STBitmap bitmap;
+				bitmap.SetBitmapObject( srcBitmap );
+				int blit_width = dinfo.image_width/dinfo.scale_denom;
+				int blit_height = height;
+				
+				if( blit_width > 0xFFF )
+				{
+					blit_width = 0xFFF;
+				}
+				if( blit_height > 0xFFF )
+				{
+					blit_height = 0xFFF;
+				}
+				
+				STBlitter::GetInstance()->BitBlt( 0, 0, mDecodeBitmap->GetWidth(), mDecodeBitmap->GetHeight(),
+					&bitmap, 0, 0, blit_width, blit_height, mDecodeBitmap );
+				
+				SysEventJpegDecoded decoded( mDecodeProgress );
+				decoded.Send();
+				decoded_result = true;
+				*/
+			}
+			
+			LOG_TRACE( "Decoding finished.." );
+			(void) jpeg_finish_decompress(&dinfo);	
+			
+			jpeg_destroy_decompress((struct jpeg_decompress_struct *)&dinfo);			
+			m_decode_hw = JPEG_SW;
+			munmap( srcBuffer.mPhysAddr, srcBuffer.mSize );
+			ioctl( fd, JPEGBUFFER_IOC_FREE, &srcBuffer );
+			ioctl( fd, JPEGBUFFER_IOC_FREE, &dstBuffer );
+			::close( fd );		
+		} 			
+
+		return result;
+	}
+#endif
     jpeg_decompress_struct* info() { return &m_info; }
     JSAMPARRAY samples() const { return m_samples; }
     JPEGImageDecoder* decoder() { return m_decoder; }
+
+	/* decode_hw */
+	enum
+	{
+		JPEG_HW_NO_INFO = 0,
+		JPEG_HW,
+		JPEG_SW,
+	};
 
 private:
     JPEGImageDecoder* m_decoder;
@@ -371,6 +866,9 @@ private:
     jstate m_state;
 
     JSAMPARRAY m_samples;
+
+	/* kdhong - to support JPEG HW decode */
+	int m_decode_hw;
 };
 
 // Override the standard error method in the IJG JPEG decoder code.
@@ -389,6 +887,22 @@ void skip_input_data(j_decompress_ptr jd, long num_bytes)
 {
     decoder_source_mgr *src = (decoder_source_mgr *)jd->src;
     src->decoder->skipBytes(num_bytes);
+}
+
+void custom_skip_input_data(j_decompress_ptr cinfo, long num_bytes)
+{
+  decoder_source_mgr* src = (decoder_source_mgr*) cinfo->src;
+
+  /* Just a dumb implementation for now.  Could use fseek() except
+   * it doesn't work on pipes.	Not clear that being smart is worth
+   * any trouble anyway --- large skips are infrequent.
+   */
+  LOG_TRACE( " num_bytes %d",  num_bytes );
+   
+  if (num_bytes > 0) {
+	src->pub.next_input_byte += (size_t) num_bytes;
+	src->pub.bytes_in_buffer -= (size_t) num_bytes;
+  }
 }
 
 boolean fill_input_buffer(j_decompress_ptr jd)
@@ -531,14 +1045,31 @@ void JPEGImageDecoder::decode(bool onlySize)
     if (!m_reader)
         m_reader = adoptPtr(new JPEGImageReader(this));
 
-    // If we couldn't decode the image but we've received all the data, decoding
-    // has failed.
-    if (!m_reader->decode(*m_data, onlySize) && isAllDataReceived())
-        setFailed();
-    // If we're done decoding the image, we don't need the JPEGImageReader
-    // anymore.  (If we failed, |m_reader| has already been cleared.)
-    else if (!m_frameBufferCache.isEmpty() && (m_frameBufferCache[0].status() == ImageFrame::FrameComplete))
-        m_reader.clear();
+	if( isAllDataReceived() == false )
+		return;
+
+	fprintf( stderr, "JPEG Decoding - %d, %d\n", size().width(), size().height() );
+
+#ifdef ENABLE_JPEG_HW
+	// check HW decode
+	if( m_reader->decodeHW( *m_data, isAllDataReceived()) == false )
+	{
+#endif		
+	    // If we couldn't decode the image but we've received all the data, decoding
+	    // has failed.
+	    if (!m_reader->decode(*m_data, onlySize) && isAllDataReceived())
+	        setFailed();
+	    // If we're done decoding the image, we don't need the JPEGImageReader
+	    // anymore.  (If we failed, |m_reader| has already been cleared.)
+	    else if (!m_frameBufferCache.isEmpty() && (m_frameBufferCache[0].status() == ImageFrame::FrameComplete))
+	        m_reader.clear();
+#ifdef ENABLE_JPEG_HW		
+	}
+	else if (!m_frameBufferCache.isEmpty() && (m_frameBufferCache[0].status() == ImageFrame::FrameComplete))
+	{
+		m_reader.clear();
+	}
+#endif
 }
 
 }

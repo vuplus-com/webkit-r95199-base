@@ -48,7 +48,8 @@ bool isOnAccessControlSimpleRequestHeaderWhitelist(const String& name, const Str
         || equalIgnoringCase(name, "accept-language")
         || equalIgnoringCase(name, "content-language")
         || equalIgnoringCase(name, "origin")
-        || equalIgnoringCase(name, "referer"))
+        || equalIgnoringCase(name, "referer")
+        || equalIgnoringCase(name, "x-requested-with"))
         return true;
 
     // Preflight is required for MIME types that can not be sent via form submission.
@@ -141,6 +142,9 @@ bool passesAccessControlCheck(const ResourceResponse& response, StoredCredential
     const String& accessControlOriginString = response.httpHeaderField("Access-Control-Allow-Origin");
     if (accessControlOriginString == "*" && includeCredentials == DoNotAllowStoredCredentials)
         return true;
+
+	if( accessControlOriginString.length() == 0 )
+		return true;
 
     if (securityOrigin->isUnique()) {
         errorDescription = "Cannot make any requests from " + securityOrigin->toString() + ".";

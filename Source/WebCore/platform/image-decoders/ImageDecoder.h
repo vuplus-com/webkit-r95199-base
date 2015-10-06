@@ -43,9 +43,49 @@
 #elif PLATFORM(QT)
 #include <QPixmap>
 #include <QImage>
+#elif USE(CAIRO)
+#include <cairo.h>
+#include <stdio.h>
+extern "C"
+{
+cairo_surface_t *   cairo_surface_map_to_image          (cairo_surface_t *surface,
+                                                         const cairo_rectangle_int_t *extents);
+
+void                cairo_surface_unmap_image           (cairo_surface_t *surface,
+                                                         cairo_surface_t *image);
+
+}
 #endif
 
 namespace WebCore {
+
+
+#if USE(CAIRO)
+	struct CairoImageSurface {
+		CairoImageSurface() : m_surface( NULL ){}
+		~CairoImageSurface()
+		{
+			clear();
+		}	
+		void clear()
+		{
+			if( m_surface )	{
+				cairo_surface_t* surface = (cairo_surface_t*)cairo_surface_get_user_data( m_surface, (const cairo_user_data_key_t *)0x80 );
+
+				if( surface ){
+					printf( "unmap image!!\n" );
+					cairo_surface_unmap_image( surface, m_surface );
+					cairo_surface_destroy( surface );
+				}	
+				else 
+					cairo_surface_destroy( m_surface );				
+			}
+			m_surface = NULL;
+		}
+		cairo_surface_t* m_surface;	
+		unsigned* m_bytes;
+	};
+#endif
 
     // FIXME: Do we want better encapsulation?
     typedef Vector<char> ColorProfile;
@@ -144,6 +184,8 @@ namespace WebCore {
     private:
 #if USE(CG)
         typedef RetainPtr<CFMutableDataRef> NativeBackingStore;
+//#elif USE(CAIRO)
+//        typedef CairoImageSurface NativeBackingStore;
 #else
         typedef Vector<PixelData> NativeBackingStore;
 #endif

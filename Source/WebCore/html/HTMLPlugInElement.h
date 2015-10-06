@@ -42,10 +42,10 @@ public:
 
     PassScriptInstance getInstance();
 
-    Widget* pluginWidget();
+    virtual Widget* pluginWidget();
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
-    NPObject* getNPObject();
+    virtual NPObject* getNPObject();
 #endif
 
     bool isCapturingMouseEvents() const { return m_isCapturingMouseEvents; }

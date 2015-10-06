@@ -56,7 +56,6 @@
 #define ENABLE(WTF_FEATURE) (defined ENABLE_##WTF_FEATURE  && ENABLE_##WTF_FEATURE)
 
 
-
 /* ==== CPU() - the target CPU architecture ==== */
 
 /* This also defines CPU(BIG_ENDIAN) or CPU(MIDDLE_ENDIAN) or neither, as appropriate. */
@@ -117,6 +116,11 @@
 /* CPU(SH4) - SuperH SH-4 */
 #if defined(__SH4__)
 #define WTF_CPU_SH4 1
+#endif
+
+/* CPU(ST200) */
+#if defined(__ST200__) || defined(__ST200) || defined(__ST231__) || defined(__st231__) || defined(__st200__)
+#define WTF_CPU_ST200 1
 #endif
 
 /* CPU(SPARC32) - SPARC 32-bit */
@@ -509,14 +513,6 @@
 #define WTF_USE_PTHREAD_BASED_QT 1
 #endif
 
-#if !defined(ENABLE_JSC_MULTIPLE_THREADS)
-#define ENABLE_JSC_MULTIPLE_THREADS 1
-#endif
-
-#if !defined(ENABLE_WTF_MULTIPLE_THREADS)
-#define ENABLE_WTF_MULTIPLE_THREADS 1
-#endif
-
 /* On Windows, use QueryPerformanceCounter by default */
 #if OS(WINDOWS)
 #define WTF_USE_QUERY_PERFORMANCE_COUNTER  1
@@ -607,6 +603,24 @@
 #define HAVE_PTHREAD_RWLOCK 1
 #define ENABLE_WEB_ARCHIVE 1
 #endif
+
+
+#if CPU(SH4) 
+#define ENABLE_CONTEXT_MENUS 0
+#define ENABLE_DRAG_SUPPORT 0
+#define ENABLE_DATA_TRANSFER_ITEMS 0
+#define ENABLE_FTPDIR 0
+#define ENABLE_GEOLOCATION 0
+#define ENABLE_ICONDATABASE 0
+#define ENABLE_INSPECTOR 0
+#define ENABLE_JAVA_BRIDGE 0
+#define ENABLE_ORIENTATION_EVENTS 0
+#define ENABLE_DEVICE_ORIENTATION 0
+#define ENABLE_INPUT_SPEECH 0
+#define ENABLE_JAVASCRIPT_DEBUGGER 0
+#define HAVE_ACCESSIBILITY 0
+#endif
+
 
 #if PLATFORM(WIN) && !OS(WINCE)
 #define WTF_USE_CF 1
@@ -763,6 +777,7 @@
 #define HAVE_STRINGS_H 1
 #define HAVE_SYS_PARAM_H 1
 #define HAVE_SYS_TIME_H 1
+#define WTF_USE_PTHREADS 1
 
 #elif OS(ANDROID)
 
@@ -811,8 +826,8 @@
 #define ENABLE_ICONDATABASE 1
 #endif
 
-#if !defined(ENABLE_DATABASE)
-#define ENABLE_DATABASE 1
+#if !defined(ENABLE_SQL_DATABASE)
+#define ENABLE_SQL_DATABASE 1
 #endif
 
 #if !defined(ENABLE_JAVASCRIPT_DEBUGGER)
@@ -956,21 +971,9 @@
 #define ENABLE_DFG_JIT 1
 #endif
 
-#if !defined(ENABLE_TIERED_COMPILATION)
-#define ENABLE_TIERED_COMPILATION 0
-#endif
-
-/* Currently only implemented for JSVALUE64, only tested on PLATFORM(MAC) */
-#if !defined(ENABLE_VALUE_PROFILER)
-#define ENABLE_VALUE_PROFILER ENABLE_TIERED_COMPILATION
-#endif
-
-#if !defined(ENABLE_DYNAMIC_OPTIMIZATION)
-#define ENABLE_DYNAMIC_OPTIMIZATION ENABLE_TIERED_COMPILATION
-#endif
-
-#if !defined(ENABLE_DYNAMIC_TERMINATE_SPECULATION)
-#define ENABLE_DYNAMIC_TERMINATE_SPECULATION ENABLE_DYNAMIC_OPTIMIZATION
+/* Currently only implemented for JSVALUE64, only tested on PLATFORM(MAC). */
+#if !defined(ENABLE_VALUE_PROFILER) && ENABLE(DFG_JIT)
+#define ENABLE_VALUE_PROFILER 1
 #endif
 
 #if !defined(ENABLE_VERBOSE_VALUE_PROFILE) && ENABLE(VALUE_PROFILER)
@@ -1052,12 +1055,6 @@
 #define ENABLE_EXECUTABLE_ALLOCATOR_FIXED 1
 #else
 #define ENABLE_EXECUTABLE_ALLOCATOR_DEMAND 1
-#endif
-#endif
-
-#if !defined(ENABLE_LAZY_BLOCK_FREEING)
-#if ENABLE(JSC_MULTIPLE_THREADS)
-#define ENABLE_LAZY_BLOCK_FREEING 1
 #endif
 #endif
 

@@ -21,6 +21,42 @@
 
 #if ENABLE(VIDEO)
 
+#if !USE(GSTREAMER)
+
+#include "FullscreenVideoController.h"
+#include "GRefPtrGtk.h"
+#include "GtkVersioning.h"
+#include "MediaPlayer.h"
+#include "HTMLMediaElement.h"
+
+FullscreenVideoController::FullscreenVideoController()
+    : m_hudTimeoutId(0)
+    , m_progressBarUpdateId(0)
+    , m_seekLock(false)
+    , m_window(0)
+    , m_hudWindow(0)
+{
+}
+
+FullscreenVideoController::~FullscreenVideoController()
+{
+}
+
+void FullscreenVideoController::enterFullscreen()
+{
+}
+
+void FullscreenVideoController::exitFullscreen()
+{
+
+}
+
+void FullscreenVideoController::setMediaElement(WebCore::HTMLMediaElement* mediaElement)
+{
+}
+
+
+#else
 #include "FullscreenVideoController.h"
 
 #include "GRefPtrGtk.h"
@@ -582,5 +618,7 @@ void FullscreenVideoController::createHud()
 
     m_progressBarUpdateId = g_timeout_add(PROGRESS_BAR_UPDATE_INTERVAL, reinterpret_cast<GSourceFunc>(progressBarUpdateCallback), this);
 }
+
+#endif
 
 #endif

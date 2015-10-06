@@ -19,7 +19,7 @@
 #include "config.h"
 #include "WidgetBackingStore.h"
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) && PLATFORM(X11)
 
 #include "GtkVersioning.h"
 #include "RefPtrCairo.h"

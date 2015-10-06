@@ -369,13 +369,13 @@ Vector<String> PluginDatabase::defaultPluginDirectories()
 #if defined(XP_UNIX)
     String userPluginPath = homeDirectoryPath();
     userPluginPath.append(String("/.mozilla/plugins"));
-    paths.append(userPluginPath);
+//    paths.append(userPluginPath);
 
     userPluginPath = homeDirectoryPath();
     userPluginPath.append(String("/.netscape/plugins"));
-    paths.append(userPluginPath);
+ //   paths.append(userPluginPath);
 
-    paths.append("/usr/lib/browser/plugins");
+ /*   paths.append("/usr/lib/browser/plugins");
     paths.append("/usr/local/lib/mozilla/plugins");
     paths.append("/usr/lib/firefox/plugins");
     paths.append("/usr/lib64/browser-plugins");
@@ -393,10 +393,10 @@ Vector<String> PluginDatabase::defaultPluginDirectories()
     paths.append("/usr/lib64/mozilla/plugins");
     paths.append("/usr/lib/nsbrowser/plugins");
     paths.append("/usr/lib64/nsbrowser/plugins");
-
+*/
     String mozHome(getenv("MOZILLA_HOME"));
     mozHome.append("/plugins");
-    paths.append(mozHome);
+//    paths.append(mozHome);
 
     Vector<String> mozPaths;
     String mozPath(getenv("MOZ_PLUGIN_PATH"));

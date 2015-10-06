@@ -26,7 +26,7 @@
 #ifndef MediaPlayerPrivate_h
 #define MediaPlayerPrivate_h
 
-#if ENABLE(VIDEO)
+#if ENABLE_VIDEO
 
 #include "MediaPlayer.h"
 #include <wtf/Forward.h>

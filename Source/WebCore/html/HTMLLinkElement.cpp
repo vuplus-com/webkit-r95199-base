@@ -443,6 +443,21 @@ void HTMLLinkElement::removePendingSheet()
     document()->removePendingSheet();
 }
 
+void HTMLLinkElement::asyncRemovePendingSheet()
+{
+    PendingSheetType type = m_pendingSheetType;
+    m_pendingSheetType = None;
+
+    if (type == None)
+        return;
+    if (type == NonBlocking) {
+        // Document::removePendingSheet() triggers the style selector recalc for blocking sheets.
+        document()->styleSelectorChanged(RecalcStyleImmediately);
+        return;
+    }
+    document()->asyncRemovePendingSheet();
+}
+
 DOMSettableTokenList* HTMLLinkElement::sizes() const
 {
     return m_sizes.get();

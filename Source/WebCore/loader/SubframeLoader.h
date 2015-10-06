@@ -65,6 +65,9 @@ public:
     bool requestObject(HTMLPlugInImageElement*, const String& url, const AtomicString& frameName,
         const String& serviceType, const Vector<String>& paramNames, const Vector<String>& paramValues);
 
+	bool requestObjectWithoutRenderer(HTMLPlugInImageElement*, const String& url, const AtomicString& frameName,
+		const String& serviceType, const Vector<String>& paramNames, const Vector<String>& paramValues);
+
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
     // FIXME: This should take Element* instead of Node*, or better yet the
     // specific type of Element which this code depends on.
@@ -81,9 +84,14 @@ public:
 
 private:
     bool requestPlugin(HTMLPlugInImageElement*, const KURL&, const String& serviceType, const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback);
+    bool requestPluginWithoutRenderer(HTMLPlugInImageElement*, const KURL&, const String& serviceType, const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback);
+
     Frame* loadOrRedirectSubframe(HTMLFrameOwnerElement*, const KURL&, const AtomicString& frameName, bool lockHistory, bool lockBackForwardList);
     Frame* loadSubframe(HTMLFrameOwnerElement*, const KURL&, const String& name, const String& referrer);
     bool loadPlugin(HTMLPlugInImageElement*, const KURL&, const String& mimeType,
+        const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback);
+
+    bool loadPluginWithoutRenderer(HTMLPlugInImageElement*, const KURL&, const String& mimeType,
         const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback);
 
     bool shouldUsePlugin(const KURL&, const String& mimeType, bool shouldPreferPlugInsForImages, bool hasFallback, bool& useFallback);

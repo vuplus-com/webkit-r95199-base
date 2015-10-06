@@ -364,12 +364,14 @@ static void webkit_web_inspector_set_property(GObject* object, guint prop_id, co
         break;
     }
     case PROP_TIMELINE_PROFILING_ENABLED: {
+#if ENABLE(JAVASCRIPT_DEBUGGER)		
         bool enabled = g_value_get_boolean(value);
         WebCore::InspectorController* controller = priv->page->inspectorController();
         if (enabled)
             controller->startTimelineProfiler();
         else
             controller->stopTimelineProfiler();
+#endif		
         break;
     }
     default:
@@ -398,7 +400,9 @@ static void webkit_web_inspector_get_property(GObject* object, guint prop_id, GV
 #endif
         break;
     case PROP_TIMELINE_PROFILING_ENABLED:
+#if ENABLE(JAVASCRIPT_DEBUGGER)		
         g_value_set_boolean(value, priv->page->inspectorController()->timelineProfilerEnabled());
+#endif
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
@@ -497,8 +501,9 @@ void webkit_web_inspector_show(WebKitWebInspector* webInspector)
 
     if (!view)
         return;
-
+#if ENABLE(JAVASCRIPT_DEBUGGER)
     priv->page->inspectorController()->show();
+#endif
 }
 
 /**
@@ -515,7 +520,9 @@ void webkit_web_inspector_inspect_node(WebKitWebInspector* webInspector, WebKitD
     g_return_if_fail(WEBKIT_IS_WEB_INSPECTOR(webInspector));
     g_return_if_fail(WEBKIT_DOM_IS_NODE(node));
 
+#if ENABLE(JAVASCRIPT_DEBUGGER)
     webInspector->priv->page->inspectorController()->inspect(core(node));
+#endif
 }
 
 /**
@@ -537,6 +544,7 @@ void webkit_web_inspector_inspect_node(WebKitWebInspector* webInspector, WebKitD
  */
 void webkit_web_inspector_inspect_coordinates(WebKitWebInspector* webInspector, gdouble x, gdouble y)
 {
+#if ENABLE(JAVASCRIPT_DEBUGGER)	
     g_return_if_fail(WEBKIT_IS_WEB_INSPECTOR(webInspector));
     g_return_if_fail(x >= 0 && y >= 0);
 
@@ -554,6 +562,7 @@ void webkit_web_inspector_inspect_coordinates(WebKitWebInspector* webInspector, 
 
     frame->contentRenderer()->layer()->hitTest(request, result);
     priv->page->inspectorController()->inspect(result.innerNonSharedNode());
+#endif
 }
 
 /**
@@ -566,19 +575,23 @@ void webkit_web_inspector_inspect_coordinates(WebKitWebInspector* webInspector, 
  */
 void webkit_web_inspector_close(WebKitWebInspector* webInspector)
 {
+#if ENABLE(JAVASCRIPT_DEBUGGER)	
     g_return_if_fail(WEBKIT_IS_WEB_INSPECTOR(webInspector));
 
     WebKitWebInspectorPrivate* priv = webInspector->priv;
     priv->page->inspectorController()->close();
+#endif	
 }
 
 void webkit_web_inspector_execute_script(WebKitWebInspector* webInspector, long callId, const gchar* script)
 {
+#if ENABLE(JAVASCRIPT_DEBUGGER)	
     g_return_if_fail(WEBKIT_IS_WEB_INSPECTOR(webInspector));
     g_return_if_fail(script);
 
     WebKitWebInspectorPrivate* priv = webInspector->priv;
     priv->page->inspectorController()->evaluateForTestInFrontend(callId, script);
+#endif	
 }
 
 #ifdef HAVE_GSETTINGS

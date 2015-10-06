@@ -527,6 +527,11 @@ void EditorClient::handleKeyboardEvent(KeyboardEvent* event)
     // be reflected in the contents of the field until the keyup DOM event.
     if (event->type() == eventNames().keypressEvent) {
 
+		/* kdhong */
+	/*	event->setDefaultHandled(); 
+		return;
+		/* kdhong */
+
         // If we have a pending composition at this point, it happened while
         // filtering a keypress, so we treat it as a normal text insertion.
         // This will also ensure that if the keypress event handler changed the

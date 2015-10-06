@@ -63,7 +63,7 @@
 #include <gtk/gtk.h>
 #include <wtf/text/CString.h>
 
-#if ENABLE(DATABASE)
+#if ENABLE(SQL_DATABASE)
 #include "DatabaseTracker.h"
 #endif
 
@@ -395,10 +395,14 @@ void ChromeClient::invalidateContentsAndWindow(const IntRect& updateRect, bool i
     GdkWindow* window = gtk_widget_get_window(GTK_WIDGET(m_webView));
 
     if (window && !updateRect.isEmpty()) {
+//		fprintf( stderr, " > invalidateContentsAndWindow %d %d %d %d immediate %d\n", updateRect.x(), updateRect.y(), updateRect.width(),
+//			updateRect.height(), immediate );
+		
         gdk_window_invalidate_rect(window, &rect, FALSE);
+
         // We don't currently do immediate updates since they delay other UI elements.
-        //if (immediate)
-        //    gdk_window_process_updates(window, FALSE);
+   //     if (immediate)
+    //        gdk_window_process_updates(window, FALSE);
     }
 }
 
@@ -576,7 +580,7 @@ void ChromeClient::print(Frame* frame)
     webkit_web_frame_print(webFrame);
 }
 
-#if ENABLE(DATABASE)
+#if ENABLE(SQL_DATABASE)
 void ChromeClient::exceededDatabaseQuota(Frame* frame, const String& databaseName)
 {
     guint64 defaultQuota = webkit_get_default_web_database_quota();

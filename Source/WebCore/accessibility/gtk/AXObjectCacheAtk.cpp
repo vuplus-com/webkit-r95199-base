@@ -31,6 +31,8 @@
 
 namespace WebCore {
 
+#if HAVE(ACCESSIBILITY)
+
 void AXObjectCache::detachWrapper(AccessibilityObject* obj)
 {
     webkit_accessible_detach(WEBKIT_ACCESSIBLE(obj->wrapper()));
@@ -209,4 +211,5 @@ void AXObjectCache::handleScrolledToAnchor(const Node*)
 {
 }
 
+#endif
 } // namespace WebCore

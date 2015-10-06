@@ -332,7 +332,7 @@ stamp-webkitmarshal.h: $(WEBKIT_MARSHAL_LIST)
 $(GENSOURCES_WEBKIT)/webkitenumtypes.h: stamp-webkitenumtypes.h
 	@true
 stamp-webkitenumtypes.h: $(webkitgtk_h_api) $(WebKit)/GNUmakefile.am
-	$(AM_V_GEN)glib-mkenums \
+	$(AM_V_GEN)/usr/bin/glib-mkenums \
 			--fhead "#ifndef WEBKIT_ENUM_TYPES_H\n" \
 			--fhead "#define WEBKIT_ENUM_TYPES_H\n\n" \
 			--fhead "#include <glib-object.h>\n\n" \
@@ -352,7 +352,7 @@ stamp-webkitenumtypes.h: $(webkitgtk_h_api) $(WebKit)/GNUmakefile.am
 	&& echo timestamp > $(@F)
 
 $(GENSOURCES_WEBKIT)/webkitenumtypes.cpp: $(webkitgtk_h_api) $(WebKit)/GNUmakefile.am
-	$(AM_V_GEN)glib-mkenums \
+	$(AM_V_GEN)/usr/bin/glib-mkenums \
 			--fhead "#include <config.h>\n" \
 			--fhead "#include <glib-object.h>\n" \
 			--fhead "#include \"$(GENSOURCES_WEBKIT)/webkitenumtypes.h\"\n\n" \

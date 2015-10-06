@@ -167,5 +167,77 @@ void InspectorFrontendClientLocal::sendMessageToBackend(const String& message)
 }
 
 } // namespace WebCore
+#else
+#include "Chrome.h"
+#include "FloatRect.h"
+#include "Frame.h"
+#include "FrameView.h"
+#include "InspectorBackendDispatcher.h"
+#include "InspectorController.h"
+#include "Page.h"
+#include "PlatformString.h"
+#include "ScriptFunctionCall.h"
+#include "ScriptObject.h"
+#include "Settings.h"
+
+
+namespace WebCore {
+
+InspectorFrontendClientLocal::InspectorFrontendClientLocal(InspectorController* inspectorController, Page* frontendPage, PassOwnPtr<Settings> settings)
+    : m_inspectorController(inspectorController)
+    , m_frontendPage(frontendPage)
+    , m_frontendScriptState(0)
+    , m_settings(settings)
+{
+}
+
+InspectorFrontendClientLocal::~InspectorFrontendClientLocal()
+{
+}
+
+void InspectorFrontendClientLocal::windowObjectCleared()
+{
+}
+
+void InspectorFrontendClientLocal::frontendLoaded()
+{
+}
+
+void InspectorFrontendClientLocal::requestAttachWindow()
+{
+}
+
+void InspectorFrontendClientLocal::requestDetachWindow()
+{
+}
+
+bool InspectorFrontendClientLocal::canAttachWindow()
+{
+}
+
+void InspectorFrontendClientLocal::changeAttachedWindowHeight(unsigned height)
+{
+}
+
+void InspectorFrontendClientLocal::moveWindowBy(float x, float y)
+{
+}
+
+void InspectorFrontendClientLocal::setAttachedWindow(bool attached)
+{
+}
+
+void InspectorFrontendClientLocal::restoreAttachedWindowHeight()
+{
+}
+
+unsigned InspectorFrontendClientLocal::constrainedAttachedWindowHeight(unsigned preferredHeight, unsigned totalWindowHeight)
+{
+}
+
+void InspectorFrontendClientLocal::sendMessageToBackend(const String& message)
+{
+}
+}
 
 #endif

@@ -31,6 +31,7 @@ namespace WebCore {
 
 static void emitTextSelectionChange(AccessibilityObject* object, VisibleSelection selection, int offset)
 {
+#if HAVE(ACCESSIBILITY)	
     AtkObject* axObject = object->wrapper();
     if (!axObject || !ATK_IS_TEXT(axObject))
         return;
@@ -38,6 +39,7 @@ static void emitTextSelectionChange(AccessibilityObject* object, VisibleSelectio
     g_signal_emit_by_name(axObject, "text-caret-moved", offset);
     if (selection.isRange())
         g_signal_emit_by_name(axObject, "text-selection-changed");
+#endif	
 }
 
 static void maybeEmitTextFocusChange(PassRefPtr<AccessibilityObject> prpObject)
@@ -56,6 +58,7 @@ static void maybeEmitTextFocusChange(PassRefPtr<AccessibilityObject> prpObject)
     if (object && oldObject && oldObject->document() != object->document())
         oldObject = 0;
 
+#if HAVE(ACCESSIBILITY)
     AtkObject* axObject = object ? object->wrapper() : 0;
     AtkObject* oldAxObject = oldObject ? oldObject->wrapper() : 0;
 
@@ -69,7 +72,7 @@ static void maybeEmitTextFocusChange(PassRefPtr<AccessibilityObject> prpObject)
             g_signal_emit_by_name(axObject, "state-change", "focused", true);
         }
     }
-
+#endif
     // Update pointer to last focused object.
     oldObject = object;
 }
@@ -77,6 +80,7 @@ static void maybeEmitTextFocusChange(PassRefPtr<AccessibilityObject> prpObject)
 
 void FrameSelection::notifyAccessibilityForSelectionChange()
 {
+#if HAVE(ACCESSIBILITY)	
     if (!AXObjectCache::accessibilityEnabled())
         return;
 
@@ -100,6 +104,7 @@ void FrameSelection::notifyAccessibilityForSelectionChange()
     // Emit relatedsignals.
     emitTextSelectionChange(object.get(), m_selection, offset);
     maybeEmitTextFocusChange(object.release());
+#endif	
 }
 
 } // namespace WebCore

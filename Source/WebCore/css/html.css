@@ -899,7 +899,7 @@ nobr {
 /* states */
 
 :focus { 
-    outline: auto 5px -webkit-focus-ring-color
+    outline: none
 }
 
 /* Read-only text fields do not show a focus ring but do still receive focus */

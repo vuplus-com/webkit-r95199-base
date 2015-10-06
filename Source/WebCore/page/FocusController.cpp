@@ -223,7 +223,22 @@ bool FocusController::advanceFocus(FocusDirection direction, KeyboardEvent* even
     case FocusDirectionRight:
     case FocusDirectionUp:
     case FocusDirectionDown:
-        return advanceFocusDirectionally(direction, event);
+ /*       if( advanceFocusDirectionally(direction, event) == false )
+        {
+			// HbbTV, If failed, advance focus in document order.
+			switch( direction )
+			{
+				case FocusDirectionLeft:
+				case FocusDirectionUp:
+					return advanceFocusInDocumentOrder( FocusDirectionBackward, event, false );
+
+				case FocusDirectionRight:
+				case FocusDirectionDown:
+					return advanceFocusInDocumentOrder( FocusDirectionForward, event, false );
+			}
+        }
+		return true; */
+		return advanceFocusDirectionally( direction, event );
     default:
         ASSERT_NOT_REACHED();
     }
@@ -593,46 +608,72 @@ static void updateFocusCandidateIfNeeded(FocusDirection direction, const FocusCa
 
     // Ignore iframes that don't have a src attribute
     if (frameOwnerElement(candidate) && (!frameOwnerElement(candidate)->contentFrame() || candidate.rect.isEmpty()))
+    {
+//		fprintf( stderr, "ignore iframes\n" );
         return;
+    }
 
     // Ignore off screen child nodes of containers that do not scroll (overflow:hidden)
     if (candidate.isOffscreen && !canBeScrolledIntoView(direction, candidate))
+    {
+//		fprintf( stderr, "candidate offscreen 1 distance %lld alignment %d\n", candidate.distance, candidate.alignment );
         return;
+    }
 
     distanceDataForNode(direction, current, candidate);
     if (candidate.distance == maxDistance())
+    {
+//		fprintf( stderr, "candidate distance max\n" );
         return;
+    }
 
     if (candidate.isOffscreenAfterScrolling && candidate.alignment < Full)
+    {
+//		fprintf( stderr, "candidate offscreen 2 distance %lld alignment %d\n", candidate.distance, candidate.alignment );
         return;
+    }
 
     if (closest.isNull()) {
+//		fprintf( stderr, "closest null\n" );		
         closest = candidate;
         return;
     }
 
-    LayoutRect intersectionRect = intersection(candidate.rect, closest.rect);
-    if (!intersectionRect.isEmpty() && !areElementsOnSameLine(closest, candidate)) {
+    LayoutRect intersectionRect = intersection(candidate.rect, current.rect);
+    if (!intersectionRect.isEmpty() && !areElementsOnSameLine(current, candidate)) {
+//		fprintf( stderr, "intersection %d %d %d %d\n", intersectionRect.x(), intersectionRect.y(), intersectionRect.width(), intersectionRect.height() );
         // If 2 nodes are intersecting, do hit test to find which node in on top.
         LayoutUnit x = intersectionRect.x() + intersectionRect.width() / 2;
         LayoutUnit y = intersectionRect.y() + intersectionRect.height() / 2;
         HitTestResult result = candidate.visibleNode->document()->page()->mainFrame()->eventHandler()->hitTestResultAtPoint(IntPoint(x, y), false, true);
         if (candidate.visibleNode->contains(result.innerNode())) {
+//			fprintf( stderr, "visible node contains\n" );
             closest = candidate;
             return;
         }
         if (closest.visibleNode->contains(result.innerNode()))
+        {
+//			fprintf( stderr, "closest visible node contains..\n" );
             return;
+        }
     }
+
+//	fprintf( stderr, "distance %lld(%d) . %lld(%d) \n", candidate.distance, candidate.alignment, closest.distance, closest.alignment );
 
     if (candidate.alignment == closest.alignment) {
         if (candidate.distance < closest.distance)
+        {
+//			fprintf( stderr, "distance %lld < %lld\n", candidate.distance, closest.distance );
             closest = candidate;
+        }
         return;
     }
 
     if (candidate.alignment > closest.alignment)
+    {
+//		fprintf( stderr, "alignment %d < %d\n", candidate.alignment, closest.alignment );
         closest = candidate;
+    }
 }
 
 void FocusController::findFocusCandidateInContainer(Node* container, const LayoutRect& startingRect, FocusDirection direction, KeyboardEvent* event, FocusCandidate& closest)
@@ -656,12 +697,28 @@ void FocusController::findFocusCandidateInContainer(Node* container, const Layou
         if (!node->isKeyboardFocusable(event) && !node->isFrameOwnerElement() && !canScrollInDirection(node, direction))
             continue;
 
+		if( !node->renderer() )
+			continue;
+
+		if( node->isFrameOwnerElement() )
+			continue;
+
+		LayoutRect rect = node->getRect();
+
+//		fprintf( stderr, "Dir %d, rect (%d %d %d %d) --> (%d %d %d %d)\n", direction, startingRect.x(), startingRect.y(), startingRect.width(), startingRect.height(),
+//			rect.x(), rect.y(), rect.width(), rect.height() );
+
         FocusCandidate candidate = FocusCandidate(node, direction);
         if (candidate.isNull())
+        {
+//			fprintf( stderr, "candidate null..\n" );
             continue;
+        }
 
         candidate.enclosingScrollableBox = container;
         updateFocusCandidateIfNeeded(direction, current, candidate, closest);
+
+//		fprintf( stderr, " closest : %d %d %d %d. distance %lld,, parent distance %lld\n", closest.rect.x(), closest.rect.y(), closest.rect.width(), closest.rect.height(), closest.distance, closest.parentDistance );
     }
 }
 
@@ -671,6 +728,8 @@ bool FocusController::advanceFocusDirectionallyInContainer(Node* container, cons
         return false;
 
     LayoutRect newStartingRect = startingRect;
+
+//	fprintf( stderr, "startingRect %d %d %d %d\n", startingRect.x(), startingRect.y(), startingRect.width(), startingRect.height() );
 
     if (startingRect.isEmpty())
         newStartingRect = virtualRectForDirection(direction, nodeRectInAbsoluteCoordinates(container));

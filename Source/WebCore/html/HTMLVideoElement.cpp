@@ -54,6 +54,10 @@ inline HTMLVideoElement::HTMLVideoElement(const QualifiedName& tagName, Document
 
 PassRefPtr<HTMLVideoElement> HTMLVideoElement::create(const QualifiedName& tagName, Document* document)
 {
+	fprintf( stderr, "VIDEO constructor\n" );
+	fprintf( stderr, "VIDEO constructor\n" );
+	fprintf( stderr, "VIDEO constructor\n" );
+
     return adoptRef(new HTMLVideoElement(tagName, document));
 }
 

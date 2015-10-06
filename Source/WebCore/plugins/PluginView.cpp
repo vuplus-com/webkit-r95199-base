@@ -862,11 +862,15 @@ PluginView::PluginView(Frame* parentFrame, const IntSize& size, PluginPackage* p
     , m_fakeWindow(0)
 #endif
 #if defined(XP_UNIX) && ENABLE(NETSCAPE_PLUGIN_API)
+#if PLATFORM(X11)
     , m_hasPendingGeometryChange(true)
     , m_drawable(0)
     , m_visual(0)
     , m_colormap(0)
     , m_pluginDisplay(0)
+#elif defined(GDK_WINDOWING_DIRECTFB)
+    , m_pixmap(0)
+#endif
 #endif
 #if PLATFORM(QT) && defined(MOZ_PLATFORM_MAEMO) && (MOZ_PLATFORM_MAEMO >= 5)
     , m_renderToImage(false)
@@ -875,6 +879,7 @@ PluginView::PluginView(Frame* parentFrame, const IntSize& size, PluginPackage* p
     , m_manualStream(0)
     , m_isJavaScriptPaused(false)
     , m_haveCalledSetWindow(false)
+    , m_oipfType( OIPF_TYPE_UNDEFINED )
 {
     if (!m_plugin) {
         m_status = PluginStatusCanNotFindPlugin;

@@ -310,6 +310,9 @@ static void contextMenuConnectActivate(GtkMenuItem* item, ContextMenuController*
 
 static gboolean webkit_web_view_forward_context_menu_event(WebKitWebView* webView, const PlatformMouseEvent& event)
 {
+#if !ENABLE(CONTEXT_MENUS)
+	return FALSE;
+#else
     Page* page = core(webView);
     page->contextMenuController()->clearContextMenu();
     Frame* focusedFrame;
@@ -385,6 +388,7 @@ static gboolean webkit_web_view_forward_context_menu_event(WebKitWebView* webVie
 
     gtk_menu_popup(menu, 0, 0, &PopupMenuPositionFunc, webView, event.button() + 1, gtk_get_current_event_time());
     return TRUE;
+#endif
 }
 
 static const int gContextMenuMargin = 1;
@@ -427,7 +431,6 @@ static gboolean webkit_web_view_popup_menu_handler(GtkWidget* widget)
     return webkit_web_view_forward_context_menu_event(WEBKIT_WEB_VIEW(widget), event);
 }
 
-#ifndef GTK_API_VERSION_2
 static void setHorizontalAdjustment(WebKitWebView* webView, GtkAdjustment* adjustment)
 {
     // This may be called after the page has been destroyed, in which case we do nothing.
@@ -444,6 +447,7 @@ static void setVerticalAdjustment(WebKitWebView* webView, GtkAdjustment* adjustm
         static_cast<WebKit::ChromeClient*>(page->chrome()->client())->adjustmentWatcher()->setVerticalAdjustment(adjustment);
 }
 
+#ifndef GTK_API_VERSION_2
 static GtkAdjustment* getHorizontalAdjustment(WebKitWebView* webView)
 {
     Page* page = core(webView);
@@ -643,6 +647,8 @@ static void paintWebView(Frame* frame, gboolean transparent, GraphicsContext& co
 {
     bool coalesce = true;
 
+//	fprintf( stderr, " <><><> paintWebView\n" );
+
     if (rects.size() > 0)
         coalesce = shouldCoalesce(clipRect, rects);
 
@@ -665,7 +671,9 @@ static void paintWebView(Frame* frame, gboolean transparent, GraphicsContext& co
 
     context.save();
     context.clip(clipRect);
+#if ENABLE(JAVASCRIPT_DEBUGGER)		
     frame->page()->inspectorController()->drawHighlight(context);
+#endif
     context.restore();
 }
 #ifdef GTK_API_VERSION_2
@@ -675,6 +683,9 @@ static gboolean webkit_web_view_expose_event(GtkWidget* widget, GdkEventExpose* 
     WebKitWebViewPrivate* priv = webView->priv;
 
     Frame* frame = core(webView)->mainFrame();
+	
+//	fprintf( stderr, " >> webkit_web_view_expose_event\n" );
+	
     if (frame->contentRenderer() && frame->view()) {
         frame->view()->updateLayoutAndStyleIfNeededRecursive();
 
@@ -738,6 +749,9 @@ static gboolean webkit_web_view_key_press_event(GtkWidget* widget, GdkEventKey* 
 
     if (frame->eventHandler()->keyEvent(keyboardEvent))
         return TRUE;
+
+
+	fprintf( stderr, "Key Event not handled by browser - %s\n", keyboardEvent.keyIdentifier().utf8().data() );
 
     /* Chain up to our parent class for binding activation */
     return GTK_WIDGET_CLASS(webkit_web_view_parent_class)->key_press_event(widget, event);
@@ -1039,14 +1053,8 @@ static void webkit_web_view_realize(GtkWidget* widget)
 #ifdef GTK_API_VERSION_2
 static void webkit_web_view_set_scroll_adjustments(WebKitWebView* webView, GtkAdjustment* horizontalAdjustment, GtkAdjustment* verticalAdjustment)
 {
-    // This may be called after the page has been destroyed, in which case we do nothing.
-    Page* page = core(webView);
-    if (!page)
-        return;
-
-    WebKit::ChromeClient* client = static_cast<WebKit::ChromeClient*>(page->chrome()->client());
-    client->adjustmentWatcher()->setHorizontalAdjustment(horizontalAdjustment);
-    client->adjustmentWatcher()->setVerticalAdjustment(verticalAdjustment);
+    setHorizontalAdjustment(webView, horizontalAdjustment);
+    setVerticalAdjustment(webView, verticalAdjustment);
 }
 #endif
 
@@ -1307,6 +1315,11 @@ static void webkit_web_view_dispose(GObject* object)
 
     priv->disposing = TRUE;
 
+    // Make sure GtkAdjustmentWatcher won't be reacting to adjustment changes after the
+    // WebView is destroyed.
+    setHorizontalAdjustment(webView, 0);
+    setVerticalAdjustment(webView, 0);
+
     // These smart pointers are cleared manually, because some cleanup operations are
     // very sensitive to their value. We may crash if these are done in the wrong order.
     priv->backForwardList.clear();
@@ -1372,6 +1385,7 @@ static gboolean webkit_navigation_request_handled(GSignalInvocationHint* ihint, 
 
 static AtkObject* webkit_web_view_get_accessible(GtkWidget* widget)
 {
+#if HAVE(ACCESSIBILITY)	
     WebKitWebView* webView = WEBKIT_WEB_VIEW(widget);
     if (!core(webView))
         return 0;
@@ -1404,6 +1418,9 @@ static AtkObject* webkit_web_view_get_accessible(GtkWidget* widget)
     // We don't want the extra reference returned by ref_accessible_child.
     g_object_unref(axWebView);
     return axWebView;
+#else
+	return 0;
+#endif
 }
 
 static gdouble webViewGetDPI(WebKitWebView* webView)
@@ -1450,6 +1467,7 @@ static void webkit_web_view_screen_changed(GtkWidget* widget, GdkScreen* previou
 
 static void webkit_web_view_drag_end(GtkWidget* widget, GdkDragContext* context)
 {
+#if ENABLE(DRAG_SUPPORT)
     WebKitWebView* webView = WEBKIT_WEB_VIEW(widget);
     WebKitWebViewPrivate* priv = webView->priv;
 
@@ -1487,10 +1505,12 @@ static void webkit_web_view_drag_end(GtkWidget* widget, GdkDragContext* context)
 
     PlatformMouseEvent platformEvent(&event->button);
     frame->eventHandler()->dragSourceEndedAt(platformEvent, gdkDragActionToDragOperation(gdk_drag_context_get_selected_action(context)));
+#endif	
 }
 
 static void webkit_web_view_drag_data_get(GtkWidget* widget, GdkDragContext* context, GtkSelectionData* selectionData, guint info, guint)
 {
+#if ENABLE(DRAG_SUPPORT)	
     WebKitWebViewPrivate* priv = WEBKIT_WEB_VIEW(widget)->priv;
 
     // This might happen if a drag is still in progress after a WebKitWebView
@@ -1499,10 +1519,13 @@ static void webkit_web_view_drag_data_get(GtkWidget* widget, GdkDragContext* con
         return;
 
     PasteboardHelper::defaultPasteboardHelper()->fillSelectionData(selectionData, info, priv->draggingDataObjects.get(context).get());
+#endif	
 }
 
 static gboolean doDragLeaveLater(DroppingContext* context)
 {
+#if ENABLE(DRAG_SUPPORT)
+	
     WebKitWebView* webView = context->webView;
     WebKitWebViewPrivate* priv = webView->priv;
 
@@ -1525,11 +1548,14 @@ static gboolean doDragLeaveLater(DroppingContext* context)
     core(webView)->dragController()->dragEnded();
     priv->droppingContexts.remove(context->gdkContext);
     delete context;
+#endif	
     return FALSE;
 }
 
 static void webkit_web_view_drag_leave(GtkWidget* widget, GdkDragContext* context, guint time)
 {
+#if ENABLE(DRAG_SUPPORT)
+	
     WebKitWebView* webView = WEBKIT_WEB_VIEW(widget);
     WebKitWebViewPrivate* priv = webView->priv;
 
@@ -1540,10 +1566,12 @@ static void webkit_web_view_drag_leave(GtkWidget* widget, GdkDragContext* contex
     // the drag-drop signal. We want the actions for drag-leave to happen after
     // those for drag-drop, so schedule them to happen asynchronously here.
     g_timeout_add(0, reinterpret_cast<GSourceFunc>(doDragLeaveLater), priv->droppingContexts.get(context));
+#endif	
 }
 
 static gboolean webkit_web_view_drag_motion(GtkWidget* widget, GdkDragContext* context, gint x, gint y, guint time)
 {
+#if ENABLE(DRAG_SUPPORT)	
     WebKitWebView* webView = WEBKIT_WEB_VIEW(widget);
     WebKitWebViewPrivate* priv = webView->priv;
 
@@ -1578,11 +1606,14 @@ static gboolean webkit_web_view_drag_motion(GtkWidget* widget, GdkDragContext* c
     DragOperation operation = core(webView)->dragController()->dragUpdated(&dragData);
     gdk_drag_status(context, dragOperationToSingleGdkDragAction(operation), time);
 
+#endif
     return TRUE;
 }
 
 static void webkit_web_view_drag_data_received(GtkWidget* widget, GdkDragContext* context, gint x, gint y, GtkSelectionData* selectionData, guint info, guint time)
 {
+#if ENABLE(DRAG_SUPPORT)
+	
     WebKitWebView* webView = WEBKIT_WEB_VIEW(widget);
     WebKitWebViewPrivate* priv = webView->priv;
 
@@ -1604,10 +1635,12 @@ static void webkit_web_view_drag_data_received(GtkWidget* widget, GdkDragContext
     DragData dragData(droppingContext->dataObject.get(), position, convertWidgetPointToScreenPoint(widget, position), gdkDragActionToDragOperation(gdk_drag_context_get_actions(context)));
     DragOperation operation = core(webView)->dragController()->dragEntered(&dragData);
     gdk_drag_status(context, dragOperationToSingleGdkDragAction(operation), time);
+#endif	
 }
 
 static gboolean webkit_web_view_drag_drop(GtkWidget* widget, GdkDragContext* context, gint x, gint y, guint time)
 {
+#if ENABLE(DRAG_SUPPORT)	
     WebKitWebView* webView = WEBKIT_WEB_VIEW(widget);
     WebKitWebViewPrivate* priv = webView->priv;
 
@@ -1622,6 +1655,7 @@ static gboolean webkit_web_view_drag_drop(GtkWidget* widget, GdkDragContext* con
     core(webView)->dragController()->performDrag(&dragData);
 
     gtk_drag_finish(context, TRUE, FALSE, time);
+#endif	
     return TRUE;
 }
 
@@ -3233,7 +3267,7 @@ static void webkit_web_view_update_settings(WebKitWebView* webView)
     coreSettings->setHyperlinkAuditingEnabled(settingsPrivate->enableHyperlinkAuditing);
     coreSettings->setDNSPrefetchingEnabled(settingsPrivate->enableDNSPrefetching);
 
-#if ENABLE(DATABASE)
+#if ENABLE(SQL_DATABASE)
     AbstractDatabase::setIsAvailable(settingsPrivate->enableHTML5Database);
 #endif
 
@@ -3318,7 +3352,7 @@ static void webkit_web_view_settings_notify(WebKitWebSettings* webSettings, GPar
         settings->setPrivateBrowsingEnabled(g_value_get_boolean(&value));
     else if (name == g_intern_string("enable-caret-browsing"))
         settings->setCaretBrowsingEnabled(g_value_get_boolean(&value));
-#if ENABLE(DATABASE)
+#if ENABLE(SQL_DATABASE)
     else if (name == g_intern_string("enable-html5-database")) {
         AbstractDatabase::setIsAvailable(g_value_get_boolean(&value));
     }
@@ -3399,7 +3433,9 @@ static void webkit_web_view_init(WebKitWebView* webView)
     pageClients.contextMenuClient = new WebKit::ContextMenuClient(webView);
     pageClients.editorClient = new WebKit::EditorClient(webView);
     pageClients.dragClient = new WebKit::DragClient(webView);
+#if ENABLE(INSPECTOR)	
     pageClients.inspectorClient = new WebKit::InspectorClient(webView);
+#endif
 
 #if ENABLE(DEVICE_ORIENTATION)
     pageClients.deviceMotionClient = static_cast<WebCore::DeviceMotionClient*>(new DeviceMotionClientGtk);
@@ -3443,6 +3479,10 @@ static void webkit_web_view_init(WebKitWebView* webView)
     gtk_drag_dest_set_target_list(GTK_WIDGET(webView), PasteboardHelper::defaultPasteboardHelper()->targetList());
 
     priv->selfScrolling = false;
+
+//	WebCore::MemoryCache* cache = WebCore::memoryCache();
+//	cache->setDisabled(true);
+	
 }
 
 GtkWidget* webkit_web_view_new(void)
@@ -4982,6 +5022,47 @@ GtkMenu* webkit_web_view_get_context_menu(WebKitWebView* webView)
     return 0;
 #endif
 }
+
+gboolean
+webkit_web_view_check_multitap_event(WebKitWebView *webView, GdkEventKey *keyEvent, gint* x, gint* y, gint* height )
+{
+    Frame* frame = core(webView)->focusController()->focusedOrMainFrame();
+
+    if (!frame->view())
+        return FALSE;
+
+
+	/* kdhong - virtual keyboard */
+	Node* node = getFocusedNode( frame );
+
+	if( node )
+	{
+		if( node->shouldUseInputMethod() == TRUE )
+		{
+			if( node->isElementNode() == true )
+			{
+				Element* element = static_cast<Element*>(node);
+				*x = 0;
+				*y = 0;
+				*height = element->offsetHeight();
+	
+				while( element )
+				{
+					*x += element->offsetLeft();
+					*y += element->offsetTop();
+
+					element = element->offsetParent();
+				}
+			}
+			
+			return TRUE;
+		}
+	}	
+
+	return FALSE;
+}
+
+
 
 void webViewEnterFullscreen(WebKitWebView* webView, Node* node)
 {

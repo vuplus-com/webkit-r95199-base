@@ -86,7 +86,9 @@ private:
     Page* m_frontendPage;
     ScriptState* m_frontendScriptState;
     // TODO(yurys): this ref shouldn't be needed.
+#if ENABLE(INSPECTOR)
     RefPtr<InspectorFrontendHost> m_frontendHost;
+#endif
     OwnPtr<InspectorFrontendClientLocal::Settings> m_settings;
 };
 

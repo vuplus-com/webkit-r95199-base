@@ -486,16 +486,12 @@ int PlatformKeyboardEvent::windowsKeyCodeForGdkKeyCode(unsigned keycode)
             // VK_OEM_CLEAR (FE) Clear key
         case GDK_F1:
         case GDK_F2:
-        case GDK_F3:
-        case GDK_F4:
-        case GDK_F5:
-        case GDK_F6:
-        case GDK_F7:
-        case GDK_F8:
-        case GDK_F9:
-        case GDK_F10:
-        case GDK_F11:
-        case GDK_F12:
+//        case GDK_F3:
+  //      case GDK_F4:
+ //       case GDK_F9:
+  //      case GDK_F10:
+   //     case GDK_F11:
+   //     case GDK_F12:
         case GDK_F13:
         case GDK_F14:
         case GDK_F15:
@@ -510,6 +506,25 @@ int PlatformKeyboardEvent::windowsKeyCodeForGdkKeyCode(unsigned keycode)
         case GDK_F24:
             return VK_F1 + (keycode - GDK_F1);
 
+        case GDK_F5:	/* RED */
+        case GDK_F6:	/* GREEN */
+        case GDK_F7:	/* YELLOW */
+        case GDK_F8:	/* BLUE */
+			return 0x193 + (keycode - GDK_F5);
+
+		case GDK_F9:	/* PLAY */
+			return 415;
+		case GDK_F10:	/* STOP */	
+			return 413;
+		case GDK_F11:	/* REW */	
+			return 412;
+		case GDK_F12:	/* FF */			
+			return 417;
+		case GDK_F3:	/* PLAY_PAUSE */
+			return 402;
+		case GDK_F4:
+			return VK_ESCAPE;
+			
         default:
             return 0;
     }
@@ -527,6 +542,75 @@ String PlatformKeyboardEvent::singleCharacterString(unsigned val)
             return String("\x8");
         case GDK_Tab:
             return String("\t");
+			
+		case GDK_Left:
+			return String( "\x25" );
+		case GDK_Up:
+			return String( "\x26" );
+		case GDK_Right:
+			return String( "\x27" );
+		case GDK_Down:
+			return String( "\x28" );
+
+        case GDK_F5:	/* RED */
+		{
+			UChar ch = 0x193;			
+			return String( &ch, 1 );
+        }
+        case GDK_F6:	/* GREEN */
+		{
+			UChar ch = 0x194;			
+			return String( &ch, 1 );
+		}
+        case GDK_F7:	/* YELLOW */
+		{
+			UChar ch = 0x195;			
+			return String( &ch, 1 );
+		}
+        case GDK_F8:	/* BLUE */
+		{
+			UChar ch = 0x196;			
+			return String( &ch, 1 );
+		}
+        case GDK_F4:	/* BACK */
+		{
+			UChar ch = 0x1cd;			
+			return String( &ch, 1 );
+        }
+		case GDK_F9:	/* PLAY */
+		{
+			UChar ch = 415;
+			return String( &ch, 1 );
+		}
+		case GDK_F10:	/* STOP */	
+		{
+			UChar ch = 413;
+			return String( &ch, 1 );
+		}
+		case GDK_F11:	/* REW */	
+		{
+			UChar ch = 412;
+			return String( &ch, 1 );
+		}
+
+		case GDK_F12:	/* FF */			
+		{
+			UChar ch = 417;
+			return String( &ch, 1 );
+		}
+
+		case GDK_F3:	/* PLAY PAUSE */
+		{
+			UChar ch = 402;
+			return String( &ch, 1 );
+		}
+
+		case GDK_Pause:	/* PAUSE */			
+		{
+			UChar ch = 19;
+			return String( &ch, 1 );
+		}			
+
         default:
             gunichar c = gdk_keyval_to_unicode(val);
             glong nwc;

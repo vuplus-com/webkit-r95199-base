@@ -52,7 +52,7 @@ public:
 
     virtual void setCompatibilityModeFromDoctype();
 
-    Element* activeElement();
+//    Element* activeElement();	// to Document.h
     bool hasFocus();
 
     String bgColor();

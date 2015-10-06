@@ -50,7 +50,7 @@ StyleElement::StyleElement(Document* document, bool createdByParser)
     , m_startLineNumber(0)
 {
     if (createdByParser && document && document->scriptableDocumentParser())
-        m_startLineNumber = document->scriptableDocumentParser()->lineNumber();
+        m_startLineNumber = document->scriptableDocumentParser()->lineNumber().zeroBasedInt();
 }
 
 StyleElement::~StyleElement()
@@ -184,7 +184,8 @@ bool StyleElement::sheetLoaded(Document* document)
     if (isLoading())
         return false;
 
-    document->removePendingSheet();
+//    document->removePendingSheet();
+	document->asyncRemovePendingSheet();
     return true;
 }
 

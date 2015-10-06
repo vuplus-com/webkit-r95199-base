@@ -164,9 +164,10 @@ static bool areRectsFullyAligned(FocusDirection direction, const LayoutRect& a, 
         return false;
     }
 
+/*	--> Commented out, if there is intersection : it will be full aligned 
     if (aStart < bEnd)
         return false;
-
+*/
     aStart = start(direction, a);
     bStart = start(direction, b);
 
@@ -273,6 +274,8 @@ static inline bool rightOf(const LayoutRect& a, const LayoutRect& b)
 static bool isRectInDirection(FocusDirection direction, const LayoutRect& curRect, const LayoutRect& targetRect)
 {
     switch (direction) {
+		// kdhong - in case of overlapped area of links  - Tagesschau hbbtv
+		/*
     case FocusDirectionLeft:
         return targetRect.maxX() <= curRect.x();
     case FocusDirectionRight:
@@ -280,7 +283,20 @@ static bool isRectInDirection(FocusDirection direction, const LayoutRect& curRec
     case FocusDirectionUp:
         return targetRect.maxY() <= curRect.y();
     case FocusDirectionDown:
-        return targetRect.y() >= curRect.maxY();
+        return targetRect.y() >= curRect.maxY(); 
+        */
+	case FocusDirectionLeft:
+		return ( targetRect.center().x() < curRect.center().x() ) &&
+			( targetRect.x() < curRect.x() );
+	case FocusDirectionRight:
+		return ( targetRect.center().x() > curRect.center().x() ) &&
+			( targetRect.maxX() > curRect.maxX() );
+	case FocusDirectionUp:
+		return ( targetRect.center().y() < curRect.center().y() ) &&
+			( targetRect.y() < curRect.y() );
+	case FocusDirectionDown:
+		return ( targetRect.center().y() > curRect.center().y() ) &&
+			( targetRect.maxY() > curRect.maxY() ); 
     default:
         ASSERT_NOT_REACHED();
         return false;
@@ -522,7 +538,15 @@ LayoutRect nodeRectInAbsoluteCoordinates(Node* node, bool ignoreBorder)
 
     if (node->isDocumentNode())
         return frameRectInAbsoluteCoordinates(static_cast<Document*>(node)->frame());
-    LayoutRect rect = rectToAbsoluteCoordinates(node->document()->frame(), node->getRect());
+
+	LayoutRect rect1 = node->getRect();
+
+	if( rect1.isEmpty() )
+	{
+		rect1 = node->renderer()->absoluteBoundingBoxRect();
+	}
+
+    LayoutRect rect = rectToAbsoluteCoordinates(node->document()->frame(), rect1);
 
     // For authors that use border instead of outline in their CSS, we compensate by ignoring the border when calculating
     // the rect of the focused element.

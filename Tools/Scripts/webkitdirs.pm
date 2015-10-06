@@ -1509,6 +1509,7 @@ sub buildAutotoolsProject($@)
             push @buildArgs, $opt;
         }
     }
+#    push @buildArgs, "--with-target=directfb";
 
     # Automatically determine the number of CPUs for make only
     # if make arguments haven't already been specified.

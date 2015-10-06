@@ -90,8 +90,13 @@
 #endif
 
 #if defined(XP_UNIX)
+#if defined(MOZ_X11)
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#else
+#include <atk/atk.h>
+#include <gtk/gtk.h>
+#endif
 #include <stdio.h>
 #endif
 
@@ -271,10 +276,12 @@ typedef struct
 typedef struct
 {
   int32_t      type;
+#if defined(MOZ_X11)
   Display*     display;
   Visual*      visual;
   Colormap     colormap;
   unsigned int depth;
+#endif
 } NPSetWindowCallbackStruct;
 
 typedef struct
@@ -542,7 +549,12 @@ typedef struct _NPEvent
   uint32_t lParam;
 } NPEvent;
 #elif defined(XP_UNIX)
+#if defined(MOZ_X11)
 typedef XEvent NPEvent;
+#else
+typedef GdkEvent NPEvent;
+typedef GdkEvent XEvent;
+#endif
 #else
 typedef void*  NPEvent;
 #endif
@@ -555,7 +567,7 @@ typedef RgnHandle NPQDRegion;
 typedef CGPathRef NPCGRegion;
 #elif defined(XP_WIN)
 typedef HRGN NPRegion;
-#elif defined(XP_UNIX)
+#elif defined(XP_UNIX) && defined(MOZ_X11)
 typedef Region NPRegion;
 #elif defined(XP_SYMBIAN)
 typedef QRegion* NPRegion;

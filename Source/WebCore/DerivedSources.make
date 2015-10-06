@@ -277,6 +277,7 @@ DOM_CLASSES = \
     Internals \
     JavaScriptAudioNode \
     KeyboardEvent \
+    KeyEvent \
     LocalMediaStream \
     Location \
     LowPass2FilterNode \
@@ -825,14 +826,6 @@ endif
 
 ifeq ($(findstring ENABLE_FILTERS,$(FEATURE_DEFINES)), ENABLE_FILTERS)
     SVG_FLAGS := $(SVG_FLAGS) ENABLE_FILTERS=1
-endif
-
-ifeq ($(findstring ENABLE_SVG_AS_IMAGE,$(FEATURE_DEFINES)), ENABLE_SVG_AS_IMAGE)
-    SVG_FLAGS := $(SVG_FLAGS) ENABLE_SVG_AS_IMAGE=1
-endif
-
-ifeq ($(findstring ENABLE_SVG_ANIMATION,$(FEATURE_DEFINES)), ENABLE_SVG_ANIMATION)
-    SVG_FLAGS := $(SVG_FLAGS) ENABLE_SVG_ANIMATION=1
 endif
 
 # SVG tag and attribute names (need to pass an extra flag if svg experimental features are enabled)

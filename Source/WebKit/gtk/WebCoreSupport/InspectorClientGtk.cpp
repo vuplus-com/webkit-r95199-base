@@ -41,6 +41,8 @@ static void notifyWebViewDestroyed(WebKitWebView* webView, InspectorFrontendClie
     inspectorFrontendClient->destroyInspectorWindow(true);
 }
 
+#if ENABLE(INSPECTOR)
+
 namespace {
 
 class InspectorFrontendSettingsGtk : public InspectorFrontendClientLocal::Settings {
@@ -119,6 +121,7 @@ void InspectorClient::inspectorDestroyed()
 {
     delete this;
 }
+
 
 void InspectorClient::openInspectorFrontend(InspectorController* controller)
 {
@@ -305,6 +308,97 @@ void InspectorFrontendClient::inspectedURLChanged(const String& newURL)
 
     webkit_web_inspector_set_inspected_uri(m_webInspector, newURL.utf8().data());
 }
+#else
+
+InspectorClient::InspectorClient(WebKitWebView* webView)
+{}
+
+InspectorClient::~InspectorClient()
+{
+}
+
+void InspectorClient::inspectorDestroyed()
+{
+}
+
+void InspectorClient::openInspectorFrontend(InspectorController* controller)
+{
+}
+
+void InspectorClient::releaseFrontendPage()
+{
+}
+
+void InspectorClient::highlight()
+{
+}
+
+void InspectorClient::hideHighlight()
+{
+}
+
+bool InspectorClient::sendMessageToFrontend(const String& message)
+{
+	return false;
+}
+
+const char* InspectorClient::inspectorFilesPath()
+{
+	return "";
+   
+}
+
+
+InspectorFrontendClient::~InspectorFrontendClient()
+{
+}
+
+void InspectorFrontendClient::destroyInspectorWindow(bool notifyInspectorController)
+{
+}
+
+String InspectorFrontendClient::localizedStringsURL()
+{
+    notImplemented();
+	return String();
+}
+
+String InspectorFrontendClient::hiddenPanels()
+{
+    notImplemented();
+    return String();
+}
+
+void InspectorFrontendClient::bringToFront()
+{
+}
+
+void InspectorFrontendClient::closeWindow()
+{
+}
+
+void InspectorFrontendClient::disconnectFromBackend()
+{
+}
+
+void InspectorFrontendClient::attachWindow()
+{
+}
+
+void InspectorFrontendClient::detachWindow()
+{
+}
+
+void InspectorFrontendClient::setAttachedWindowHeight(unsigned height)
+{
+    notImplemented();
+}
+
+void InspectorFrontendClient::inspectedURLChanged(const String& newURL)
+{
+}
+
+#endif
 
 }
 

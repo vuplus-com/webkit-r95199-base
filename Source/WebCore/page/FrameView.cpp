@@ -109,6 +109,8 @@ double FrameView::s_deferredRepaintDelayIncrementDuringLoading = 0;
 // The maximum number of updateWidgets iterations that should be done before returning.
 static const unsigned maxUpdateWidgetsIterations = 2;
 
+//#define INSTRUMENT_LAYOUT_SCHEDULING 1
+
 FrameView::FrameView(Frame* frame)
     : m_frame(frame)
     , m_canHaveScrollbars(true)
@@ -910,6 +912,7 @@ void FrameView::layout(bool allowSubtree)
     if (m_inLayout)
         return;
 
+
     bool inSubframeLayoutWithFrameFlattening = parent() && m_frame->settings() && m_frame->settings()->frameFlatteningEnabled();
 
     if (inSubframeLayoutWithFrameFlattening) {
@@ -953,6 +956,10 @@ void FrameView::layout(bool allowSubtree)
     ASSERT(m_frame->view() == this);
 
     Document* document = m_frame->document();
+
+#ifdef INSTRUMENT_LAYOUT_SCHEDULING
+	printf("   Start layout: %d\n", document->elapsedTime());
+#endif        
 
     m_layoutSchedulingEnabled = false;
 
@@ -1172,6 +1179,10 @@ void FrameView::layout(bool allowSubtree)
         return;
 
     page->chrome()->client()->layoutUpdated(frame());
+#ifdef INSTRUMENT_LAYOUT_SCHEDULING
+	printf("   After layoutUpdated: %d\n", document->elapsedTime());
+#endif        
+	
     forceLayoutParentViewIfNeeded();
 }
 
@@ -2805,7 +2816,7 @@ void FrameView::forceLayout(bool allowSubtree)
     layout(allowSubtree);
 }
 
-void FrameView::forceLayoutForPagination(const FloatSize& pageSize, float maximumShrinkFactor, AdjustViewSizeOrNot shouldAdjustViewSize)
+void FrameView::forceLayoutForPagination(const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkFactor, AdjustViewSizeOrNot shouldAdjustViewSize)
 {
     // Dumping externalRepresentation(m_frame->renderer()).ascii() is a good trick to see
     // the state of things before and after the layout
@@ -2815,32 +2826,42 @@ void FrameView::forceLayoutForPagination(const FloatSize& pageSize, float maximu
         float pageLogicalHeight = root->style()->isHorizontalWritingMode() ? pageSize.height() : pageSize.width();
 
         LayoutUnit flooredPageLogicalWidth = static_cast<LayoutUnit>(pageLogicalWidth);
+        LayoutUnit flooredPageLogicalHeight = static_cast<LayoutUnit>(pageLogicalHeight);
         root->setLogicalWidth(flooredPageLogicalWidth);
-        root->setPageLogicalHeight(pageLogicalHeight);
+        root->setPageLogicalHeight(flooredPageLogicalHeight);
         root->setNeedsLayoutAndPrefWidthsRecalc();
         forceLayout();
-        
+
         // If we don't fit in the given page width, we'll lay out again. If we don't fit in the
         // page width when shrunk, we will lay out at maximum shrink and clip extra content.
         // FIXME: We are assuming a shrink-to-fit printing implementation.  A cropping
         // implementation should not do this!
         bool horizontalWritingMode = root->style()->isHorizontalWritingMode();
-        LayoutUnit docLogicalWidth = horizontalWritingMode ? root->documentRect().width() : root->documentRect().height();
+        const LayoutRect& documentRect = root->documentRect();
+        LayoutUnit docLogicalWidth = horizontalWritingMode ? documentRect.width() : documentRect.height();
         if (docLogicalWidth > pageLogicalWidth) {
-            flooredPageLogicalWidth = std::min<float>(docLogicalWidth, pageLogicalWidth * maximumShrinkFactor);
-            if (pageLogicalHeight)
-                root->setPageLogicalHeight(flooredPageLogicalWidth / pageSize.width() * pageSize.height());
+            int expectedPageWidth = std::min<float>(documentRect.width(), originalPageSize.width() * maximumShrinkFactor);
+            int expectedPageHeight = std::min<float>(documentRect.height(), originalPageSize.height() * maximumShrinkFactor);
+            FloatSize maxPageSize = m_frame->resizePageRectsKeepingRatio(FloatSize(originalPageSize.width(), originalPageSize.height()), FloatSize(expectedPageWidth, expectedPageHeight));
+            pageLogicalWidth = horizontalWritingMode ? maxPageSize.width() : maxPageSize.height();
+            pageLogicalHeight = horizontalWritingMode ? maxPageSize.height() : maxPageSize.width();
+
+            flooredPageLogicalWidth = static_cast<LayoutUnit>(pageLogicalWidth);
+            flooredPageLogicalHeight = static_cast<LayoutUnit>(pageLogicalHeight);
             root->setLogicalWidth(flooredPageLogicalWidth);
+            root->setPageLogicalHeight(flooredPageLogicalHeight);
             root->setNeedsLayoutAndPrefWidthsRecalc();
             forceLayout();
-            const LayoutRect& documentRect = root->documentRect();
-            LayoutUnit docLogicalHeight = horizontalWritingMode ? documentRect.height() : documentRect.width();
-            LayoutUnit docLogicalTop = horizontalWritingMode ? documentRect.y() : documentRect.x();
-            LayoutUnit docLogicalRight = horizontalWritingMode ? documentRect.maxX() : documentRect.maxY();
+
+            const LayoutRect& updatedDocumentRect = root->documentRect();
+            LayoutUnit docLogicalHeight = horizontalWritingMode ? updatedDocumentRect.height() : updatedDocumentRect.width();
+            LayoutUnit docLogicalTop = horizontalWritingMode ? updatedDocumentRect.y() : updatedDocumentRect.x();
+            LayoutUnit docLogicalRight = horizontalWritingMode ? updatedDocumentRect.maxX() : updatedDocumentRect.maxY();
             LayoutUnit clippedLogicalLeft = 0;
             if (!root->style()->isLeftToRightDirection())
-                clippedLogicalLeft = docLogicalRight - flooredPageLogicalWidth;
-            LayoutRect overflow(clippedLogicalLeft, docLogicalTop, flooredPageLogicalWidth, docLogicalHeight);
+                clippedLogicalLeft = docLogicalRight - pageLogicalWidth;
+            LayoutRect overflow(clippedLogicalLeft, docLogicalTop, pageLogicalWidth, docLogicalHeight);
+
             if (!horizontalWritingMode)
                 overflow = overflow.transposedRect();
             root->clearLayoutOverflow();

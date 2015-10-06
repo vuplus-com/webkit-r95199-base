@@ -467,6 +467,7 @@ public:
      * Updates the pending sheet count and then calls updateStyleSelector.
      */
     void removePendingSheet();
+	void asyncRemovePendingSheet();
 
     /**
      * This method returns true if all top-level stylesheets have loaded (including
@@ -1008,7 +1009,7 @@ public:
     bool processingLoadEvent() const { return m_processingLoadEvent; }
     bool loadEventFinished() const { return m_loadEventFinished; }
 
-#if ENABLE(DATABASE)
+#if ENABLE(SQL_DATABASE)
     virtual bool allowDatabaseAccess() const;
     virtual void databaseExceededQuota(const String& name);
 #endif
@@ -1096,6 +1097,7 @@ public:
     unsigned wheelEventHandlerCount() const { return m_wheelEventHandlerCount; }
     void didAddWheelEventHandler();
     void didRemoveWheelEventHandler();
+    Element* activeElement();	// to Document.h
     
 protected:
     Document(Frame*, const KURL&, bool isXHTML, bool isHTML);
@@ -1143,6 +1145,7 @@ private:
     PassRefPtr<NodeList> handleZeroPadding(const HitTestRequest&, HitTestResult&) const;
 
     void loadEventDelayTimerFired(Timer<Document>*);
+    void stylesheetCalcTimer(Timer<Document>*);
 
 #if ENABLE(PAGE_VISIBILITY_API)
     PageVisibilityState visibilityState() const;
@@ -1389,6 +1392,7 @@ private:
 
     int m_loadEventDelayCount;
     Timer<Document> m_loadEventDelayTimer;
+    Timer<Document> m_stylesheetCalcTimer;	
 
     ViewportArguments m_viewportArguments;
 

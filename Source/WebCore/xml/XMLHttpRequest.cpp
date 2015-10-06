@@ -403,6 +403,32 @@ void XMLHttpRequest::open(const String& method, const KURL& url, ExceptionCode& 
 
 void XMLHttpRequest::open(const String& method, const KURL& url, bool async, ExceptionCode& ec)
 {
+	KURL tmp_url = url;
+	
+	if( tmp_url.protocol() == "dvb" )
+	{
+		static char* ipc_host = NULL;
+
+		if( ipc_host == NULL )
+		{
+			ipc_host = getenv( "HBB_SYSTEM_IP" );
+			if( ipc_host == NULL )
+				ipc_host = "127.0.0.1";
+		}
+		
+		String host = tmp_url.host();
+
+
+		tmp_url.setProtocol( "http" );
+		tmp_url.setHost( ipc_host );
+		tmp_url.setPort( 9000 );
+
+		String path( "dvb/" );
+		path.append( host );
+		path.append( tmp_url.path() );		
+		tmp_url.setPath( path );
+	}
+		
     internalAbort();
     State previousState = m_state;
     m_state = UNSENT;
@@ -428,7 +454,7 @@ void XMLHttpRequest::open(const String& method, const KURL& url, bool async, Exc
 
     m_method = uppercaseKnownHTTPMethod(method);
 
-    m_url = url;
+    m_url = tmp_url;
 
     m_async = async;
 
@@ -693,7 +719,7 @@ void XMLHttpRequest::abort()
         m_state = UNSENT;
     else {
         ASSERT(!m_loader);
-        changeState(DONE);
+ /*       changeState(DONE); */
         m_state = UNSENT;
     }
 

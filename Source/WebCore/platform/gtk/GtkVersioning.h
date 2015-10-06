@@ -103,6 +103,7 @@ const gchar* gtk_menu_item_get_label(GtkMenuItem*);
 #define gtk_adjustment_set_value(adj, newValue) ((adj)->value = newValue)
 #define gtk_adjustment_set_lower(adj, newValue) ((adj)->lower = newValue)
 #define gtk_adjustment_set_upper(adj, newValue) ((adj)->upper = newValue)
+#define gtk_adjustment_get_lower(adj) ((adj)->lower)
 
 void gtk_adjustment_configure(GtkAdjustment* adjustment, gdouble value, gdouble lower, gdouble upper,
                               gdouble stepIncrement, gdouble pageIncrement, gdouble pageSize);

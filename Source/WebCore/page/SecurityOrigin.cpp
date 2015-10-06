@@ -243,9 +243,6 @@ bool SecurityOrigin::canAccess(const SecurityOrigin* other) const
         }
     }
 
-    if (canAccess && isLocal())
-       canAccess = passesFileCheck(other);
-
     return canAccess;
 }
 
