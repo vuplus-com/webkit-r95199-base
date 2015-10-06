@@ -899,7 +899,7 @@ nobr {
 /* states */
 
 :focus { 
-    outline: none
+    outline: auto 5px #00978e
 }
 
 /* Read-only text fields do not show a focus ring but do still receive focus */
