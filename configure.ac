@@ -1091,7 +1091,7 @@ fi
 AC_SUBST(GTK2_CFLAGS)
 AC_SUBST(GTK2_LIBS)
 
-#GTK_DOC_CHECK([1.10])
+GTK_DOC_CHECK([1.10])
 
 # OS conditionals
 AM_CONDITIONAL([OS_WIN32],[test "$os_win32" = "yes"])
