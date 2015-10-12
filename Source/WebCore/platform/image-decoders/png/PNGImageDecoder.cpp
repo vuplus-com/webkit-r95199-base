@@ -249,13 +249,13 @@ void PNGImageDecoder::headerAvailable()
     png_infop info = m_reader->infoPtr();
     png_uint_32 width = png_get_image_width(png, info);
     png_uint_32 height = png_get_image_height(png, info);
-    
+
     // Protect against large images.
     if (width > cMaxPNGSize || height > cMaxPNGSize) {
         longjmp(JMPBUF(png), 1);
         return;
     }
-    
+
     // We can fill in the size now that the header is available.  Avoid memory
     // corruption issues by neutering setFailed() during this call; if we don't
     // do this, failures will cause |m_reader| to be deleted, and our jmpbuf
@@ -287,7 +287,7 @@ void PNGImageDecoder::headerAvailable()
     // Expand to ensure we use 24-bit for RGB and 32-bit for RGBA.
     if (colorType == PNG_COLOR_TYPE_PALETTE || (colorType == PNG_COLOR_TYPE_GRAY && bitDepth < 8))
         png_set_expand(png);
-    
+
     png_bytep trns = 0;
     int trnsCount = 0;
     if (png_get_valid(png, info, PNG_INFO_tRNS)) {
@@ -429,7 +429,9 @@ void PNGImageDecoder::decode(bool onlySize)
     if (failed())
         return;
 
+#ifdef WEBCORE_DEBUG
 	fprintf( stderr, "PNG Decoding - %d, %d\n", size().width(), size().height() );
+#endif
 
     if (!m_reader)
         m_reader = adoptPtr(new PNGImageReader(this));

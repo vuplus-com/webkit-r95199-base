@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -39,12 +39,12 @@ static cairo_surface_t* _platform_surface = NULL;
 void ImageFrame::copyReferenceToBitmapData(const ImageFrame& other)
 {
 	printf( "%s %s %d\n", __FILE__, __func__, __LINE__ );
-	
+
     ASSERT(this != &other);
     m_backingStore = other.m_backingStore;
 	if( m_backingStore.m_surface )
 		cairo_surface_reference( m_backingStore.m_surface );
-	
+
     m_bytes = m_backingStore.m_bytes;
     // FIXME: The rest of this function seems redundant with ImageFrame::copyBitmapData.
     m_size = other.m_size;
@@ -54,18 +54,18 @@ void ImageFrame::copyReferenceToBitmapData(const ImageFrame& other)
 bool ImageFrame::copyBitmapData(const ImageFrame& other)
 {
 	printf( "%s %s %d\n", __FILE__, __func__, __LINE__ );
-	
+
     if (this == &other)
         return true;
 
 	cairo_surface_t* image_surface = other.m_backingStore.m_surface;
- 
+
 	if( image_surface )
 	{
 	    m_size = other.m_size;
 	    setHasAlpha(other.m_hasAlpha);
 
-	    m_backingStore.m_surface = (cairo_image_surface_create( CAIRO_FORMAT_ARGB32, m_size.width(), m_size.height() ));			
+	    m_backingStore.m_surface = (cairo_image_surface_create( CAIRO_FORMAT_ARGB32, m_size.width(), m_size.height() ));
 	    m_bytes = other.m_backingStore.m_bytes;
 		m_backingStore.m_bytes = m_bytes;
 
@@ -79,9 +79,9 @@ bool ImageFrame::copyBitmapData(const ImageFrame& other)
 		printf( "copy done\n" );
 	    return true;
 	}
- 
+
 	printf( "error - copy image error\n" );
-	
+
 	return false;
 }
 
@@ -93,28 +93,28 @@ bool ImageFrame::setSize(int newWidth, int newHeight)
 	{
 		m_backingStore.clear();
 	}
-	
+
 	if( _platform_surface == NULL )
 	{
 		GList* result = gtk_window_list_toplevels();
 		g_list_foreach ( result, (GFunc)g_object_ref, NULL);
-		
+
 		GList* list = g_list_first( result );
-		
+
 		while( list )
 		{
 			GtkWindow* w = GTK_WINDOW( list->data );
-		
+
 			if( w && gtk_window_is_active( w ) )
 			{
 				_platform_surface = gdk_window_create_similar_surface( gtk_widget_get_window ( GTK_WIDGET( w ) ), CAIRO_CONTENT_COLOR_ALPHA, 10, 10 );
 				break;
 			}
-			
+
 			list = g_list_next( list );
 		}
-		
-		g_list_foreach ( result, (GFunc)g_object_unref, NULL);	
+
+		g_list_foreach ( result, (GFunc)g_object_unref, NULL);
 
 	}
 
@@ -140,15 +140,15 @@ bool ImageFrame::setSize(int newWidth, int newHeight)
 			image_surface = cairo_surface_map_to_image( surface, NULL );
 
 			if( image_surface )
-			{		
+			{
 				success = true;
-				cairo_surface_set_user_data( image_surface, (const cairo_user_data_key_t *)0x80, surface, NULL );	
-				
+				cairo_surface_set_user_data( image_surface, (const cairo_user_data_key_t *)0x80, surface, NULL );
+
 				int stride = cairo_image_surface_get_stride( image_surface );
 
 				newWidth = stride / 4;
 			}
-		}					
+		}
 
 		if( success == false )
 		{
@@ -157,7 +157,7 @@ bool ImageFrame::setSize(int newWidth, int newHeight)
 				cairo_surface_unmap_image( surface, image_surface );
 				image_surface = NULL;
 			}
-			
+
 			cairo_surface_destroy( surface );
 		}
 
@@ -167,17 +167,17 @@ bool ImageFrame::setSize(int newWidth, int newHeight)
 	if( image_surface == NULL )
 	{
 		printf( "can not map device surface to image - fallback\n" );
-		
+
 		if( surface )
 		{
 			cairo_surface_destroy( surface );
 		}
-		
+
 		image_surface = cairo_image_surface_create( CAIRO_FORMAT_ARGB32,
                                                   newWidth,
                                                   newHeight);
 	}
-	
+
 	if ( !image_surface )
 	{
 		printf( "error - create image surface failed\n" );
@@ -185,7 +185,7 @@ bool ImageFrame::setSize(int newWidth, int newHeight)
 	}
 
     m_backingStore.m_surface = image_surface;
-	
+
     m_bytes = reinterpret_cast<PixelData*>(cairo_image_surface_get_data( m_backingStore.m_surface ));
 	m_backingStore.m_bytes = m_bytes;
     m_size = IntSize(newWidth, newHeight);
@@ -206,13 +206,13 @@ NativeImagePtr ImageFrame::asNewNativeImage() const
 		cairo_surface_t* device_surface = (cairo_surface_t*)cairo_surface_get_user_data( m_backingStore.m_surface, (const cairo_user_data_key_t *)0x80 );
 
 		int stride = cairo_image_surface_get_stride( (cairo_surface_t*)m_backingStore.m_surface );
-		
+
 		surface = cairo_image_surface_create_for_data(
 			reinterpret_cast<unsigned char*>(const_cast<PixelData*>(
-				m_bytes)), CAIRO_FORMAT_ARGB32, width(), height(), stride);		
+				m_bytes)), CAIRO_FORMAT_ARGB32, width(), height(), stride);
 
-		if( device_surface ){			
-			cairo_surface_set_user_data( surface, (const cairo_user_data_key_t *)0x80, device_surface, NULL );				
+		if( device_surface ){
+			cairo_surface_set_user_data( surface, (const cairo_user_data_key_t *)0x80, device_surface, NULL );
 		}
 	}
 
@@ -223,8 +223,10 @@ NativeImagePtr ImageFrame::asNewNativeImage() const
 
 NativeImagePtr ImageFrame::asNewNativeImage() const
 {
-	printf( "Cairo image surface created with data %d %d\n", width(), height() );	
-	
+#ifdef WEBCORE_DEBUG
+	printf( "Cairo image surface created with data %d %d\n", width(), height() );
+#endif
+
     return cairo_image_surface_create_for_data(
         reinterpret_cast<unsigned char*>(const_cast<PixelData*>(
             m_bytes)), CAIRO_FORMAT_ARGB32, width(), height(),

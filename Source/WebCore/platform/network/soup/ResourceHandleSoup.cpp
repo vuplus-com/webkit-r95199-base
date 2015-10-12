@@ -571,7 +571,9 @@ static bool startHTTPRequest(ResourceHandle* handle)
     ResourceRequest request(handle->firstRequest());
     KURL url(request.url());
 
+#ifdef WEBCORE_DEBUG
 	fprintf( stderr, "protocol = %s\n", url.protocol().utf8().data() );
+#endif
 
 	if( url.protocol() == "dvb" )
 	{
@@ -580,13 +582,17 @@ static bool startHTTPRequest(ResourceHandle* handle)
 		if( ipc_host == NULL )
 		{
 			ipc_host = getenv( "HBB_SYSTEM_IP" );
-			ipc_host = "127.0.0.1";			
+			ipc_host = "127.0.0.1";
 		}
-		
+
+#ifdef WEBCORE_DEBUG
 		fprintf( stderr, "path = %s\n", url.path().utf8().data() );
+#endif
 		String host = url.host();
 
+#ifdef WEBCORE_DEBUG
 		fprintf( stderr, "host = %s\n", host.utf8().data() );
+#endif
 
 		url.setProtocol( "http" );
 		url.setHost( ipc_host );
@@ -594,10 +600,12 @@ static bool startHTTPRequest(ResourceHandle* handle)
 
 		String path( "dvb/" );
 		path.append( host );
-		path.append( url.path() );		
+		path.append( url.path() );
 		url.setPath( path );
 
+#ifdef WEBCORE_DEBUG
 		fprintf( stderr, "new path = %s\n", url.path().utf8().data() );
+#endif
 	}
 
 
@@ -861,7 +869,9 @@ static bool startNonHTTPRequest(ResourceHandle* handle, KURL url)
         d->m_soupRequest = 0;
         return false;
     }
+#ifdef WEBCORE_DEBUG
 	fprintf( stderr, "URL = %s\n", urlStr.data() );
+#endif
 
     g_object_set_data(G_OBJECT(d->m_soupRequest.get()), "webkit-resource", handle);
 
@@ -886,10 +896,10 @@ SoupSession* ResourceHandle::defaultSession()
 
     if (!session) {
         session = soup_session_async_new();
-		
+
         g_object_set(session,
                      SOUP_SESSION_MAX_CONNS, maxConnections,
-                     SOUP_SESSION_MAX_CONNS_PER_HOST, maxConnectionsPerHost, 
+                     SOUP_SESSION_MAX_CONNS_PER_HOST, maxConnectionsPerHost,
                      SOUP_SESSION_ADD_FEATURE_BY_TYPE, SOUP_TYPE_CONTENT_DECODER,
                      SOUP_SESSION_USE_THREAD_CONTEXT, TRUE,
                      NULL);

@@ -23,7 +23,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -161,7 +161,7 @@ void PluginView::updatePluginWidget()
         Display* display = GDK_DISPLAY_XDISPLAY(gdk_display_get_default());
         if (m_drawable)
             XFreePixmap(display, m_drawable);
-            
+
         m_drawable = XCreatePixmap(display, getRootWindow(m_parentFrame.get()),
                                    m_windowRect.width(), m_windowRect.height(),
                                    ((NPSetWindowCallbackStruct*)m_npWindow.ws_info)->depth);
@@ -248,28 +248,28 @@ void PluginView::paint(GraphicsContext* context, const IntRect& rect)
 
 	if( m_oipfType == OIPF_TYPE_DISPLAY )
 	{
-#if defined(XP_UNIX)	
+#if defined(XP_UNIX)
 #if PLATFORM(X11)
 		Display* display = GDK_DISPLAY_XDISPLAY(gdk_display_get_default());
 		const bool syncX = m_pluginDisplay && m_pluginDisplay != display;
-	
+
 		IntRect exposedRect(rect);
 		exposedRect.intersect(frameRect());
 		exposedRect.move(-frameRect().x(), -frameRect().y());
-		
+
 		cairo_t* cr = context->platformContext()->cr();
 		cairo_save(cr);
-	
+
 		cairo_rectangle(cr,
 						frameRect().x() + exposedRect.x(), frameRect().y() + exposedRect.y(),
 						exposedRect.width(), exposedRect.height());
-		
+
 		cairo_set_source_rgba(cr, 0xff, 0x0, 0x0, 0xff );
-		
+
         cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
-	    cairo_fill(cr);	
-	
-		cairo_restore(cr);		
+	    cairo_fill(cr);
+
+		cairo_restore(cr);
 
 		XEvent xevent;
 		memset(&xevent, 0, sizeof(XEvent));
@@ -285,7 +285,7 @@ void PluginView::paint(GraphicsContext* context, const IntRect& rect)
 		dispatchNPEvent(xevent);
 
 		if (syncX)
-			XSync(m_pluginDisplay, false); // sync changes by plugin		
+			XSync(m_pluginDisplay, false); // sync changes by plugin
 #else
 		IntRect exposedRect(rect);
 		exposedRect.intersect(frameRect());
@@ -294,10 +294,12 @@ void PluginView::paint(GraphicsContext* context, const IntRect& rect)
 		cairo_t* cr = context->platformContext()->cr();
 		cairo_save(cr);
 
+#ifdef WEBCORE_DEBUG
 		fprintf( stderr, "Plugin --> %d %d %d %d --> %d %d %d %d\n",
-			rect.x(), rect.y(), rect.width(), rect.height(), 
+			rect.x(), rect.y(), rect.width(), rect.height(),
 			frameRect().x() + exposedRect.x(), frameRect().y() + exposedRect.y(),
 			exposedRect.width(), exposedRect.height());
+#endif
 
 		cairo_rectangle(cr,
 						frameRect().x() + exposedRect.x(), frameRect().y() + exposedRect.y(),
@@ -306,9 +308,9 @@ void PluginView::paint(GraphicsContext* context, const IntRect& rect)
 		cairo_set_source_rgba(cr, 0, 0, 0, 0 );
 
 		cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
-		cairo_fill(cr); 
+		cairo_fill(cr);
 
-		cairo_restore(cr);	
+		cairo_restore(cr);
 /*
 		GdkEvent gdkEvent;
 		memset(&gdkEvent, 0, sizeof(gdkEvent));
@@ -323,10 +325,10 @@ void PluginView::paint(GraphicsContext* context, const IntRect& rect)
 		exposeEvent.region = NULL; //not used
 		exposeEvent.count = 0;
 
-		dispatchNPEvent(gdkEvent);		
+		dispatchNPEvent(gdkEvent);
 */
 #endif
-#endif // defined(XP_UNIX)	
+#endif // defined(XP_UNIX)
 
 		return;
 	}
@@ -793,7 +795,7 @@ void PluginView::setNPWindowIfNeeded()
         m_npWindow.clipRect.top = 0;
         m_npWindow.clipRect.bottom = 0;
     } else {
-        // Clipping rectangle of the plug-in; the origin is the top left corner of the drawable or window. 
+        // Clipping rectangle of the plug-in; the origin is the top left corner of the drawable or window.
         m_npWindow.clipRect.left = m_npWindow.x + m_clipRect.x();
         m_npWindow.clipRect.top = m_npWindow.y + m_clipRect.y();
         m_npWindow.clipRect.right = m_npWindow.x + m_clipRect.x() + m_clipRect.width();
@@ -833,7 +835,7 @@ void PluginView::setNPWindowIfNeeded()
 
 void PluginView::updateWidgetAllocationAndClip()
 {
-    // If the window has not been embedded yet (the plug added), we delay setting its allocation until 
+    // If the window has not been embedded yet (the plug added), we delay setting its allocation until
     // that point. This fixes issues with some Java plugin instances not rendering immediately.
     if (!m_plugAdded || m_delayedAllocation.isEmpty())
         return;
@@ -1155,7 +1157,7 @@ bool PluginView::platformStart()
 		gtk_container_add(GTK_CONTAINER(pageClient), platformPluginWidget());
 		g_signal_connect(platformPluginWidget(), "plug-added", G_CALLBACK(PluginView::plugAddedCallback), this);
 		g_signal_connect(platformPluginWidget(), "plug-removed", G_CALLBACK(PluginView::plugRemovedCallback), this);
-	} 
+	}
 
 //        setPlatformWidget(gtk_socket_new());
  //       gtk_container_add(GTK_CONTAINER(pageClient), platformPluginWidget());

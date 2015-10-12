@@ -63,7 +63,9 @@ ImageBuffer::ImageBuffer(const IntSize& size, ColorSpace, RenderingMode, bool& s
                                                   size.width(),
                                                   size.height());
 
+#ifdef WEBCORE_DEBUG
 	printf( "Cairo image surface created without data %d %d\n", size.width(), size.height() );
+#endif
     if (cairo_surface_status(m_data.m_surface) != CAIRO_STATUS_SUCCESS)
         return;  // create will notice we didn't set m_initialized and fail.
 

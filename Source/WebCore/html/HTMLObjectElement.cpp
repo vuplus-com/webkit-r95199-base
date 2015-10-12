@@ -54,7 +54,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-inline HTMLObjectElement::HTMLObjectElement(const QualifiedName& tagName, Document* document, HTMLFormElement* form, bool createdByParser) 
+inline HTMLObjectElement::HTMLObjectElement(const QualifiedName& tagName, Document* document, HTMLFormElement* form, bool createdByParser)
     : HTMLPlugInImageElement(tagName, document, createdByParser, ShouldNotPreferPlugInsForImages)
     , FormAssociatedElement(form)
     , m_docNamedItem(true)
@@ -63,7 +63,9 @@ inline HTMLObjectElement::HTMLObjectElement(const QualifiedName& tagName, Docume
     , m_oipfType( NO_OIPF_OBJ )
 {
 
+#ifdef WEBCORE_DEBUG
 	fprintf( stderr, "HTMLObject Constructor this %x\n", this );
+#endif
 
     ASSERT(hasTagName(objectTag));
     if (!this->form())
@@ -88,7 +90,7 @@ inline HTMLObjectElement::~HTMLObjectElement()
 		{
 			m_widget->setParent( NULL );
 		}
-		
+
 		m_widget = 0;
 	}
 }
@@ -119,7 +121,7 @@ void HTMLObjectElement::parseMappedAttribute(Attribute* attr)
             m_imageLoader.clear();
 
 		/* oipfType */
-		
+
 		if (equalIgnoringCase( m_serviceType, "application/oipfobjectfactory") )
 		{
 			m_oipfType = OIPF_OBJ_FACTORY;
@@ -158,7 +160,7 @@ void HTMLObjectElement::parseMappedAttribute(Attribute* attr)
 			|| equalIgnoringCase(serviceType(), "application/x-mpegURL"))
 		{
 			m_oipfType = OIPF_VIDEO_MPEG;
-		}		
+		}
     } else if (attr->name() == dataAttr) {
         m_url = stripLeadingAndTrailingHTMLSpaces(attr->value());
         if (renderer()) {
@@ -212,7 +214,7 @@ static void mapDataParamToSrc(Vector<String>* paramNames, Vector<String>* paramV
         else if (equalIgnoringCase((*paramNames)[i], "data"))
             dataIndex = i;
     }
-    
+
     if (srcIndex == -1 && dataIndex != -1) {
         paramNames->append("src");
         paramValues->append((*paramValues)[dataIndex]);
@@ -224,7 +226,7 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
 {
     HashSet<StringImpl*, CaseFoldingHash> uniqueParamNames;
     String urlParameter;
-    
+
     // Scan the PARAM children and store their name/value pairs.
     // Get the URL and type from the params if we don't already have them.
     for (Node* child = firstChild(); child; child = child->nextSibling()) {
@@ -241,7 +243,7 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
         paramValues.append(p->value());
 
         // FIXME: url adjustment does not belong in this function.
-        if (url.isEmpty() && urlParameter.isEmpty() && (equalIgnoringCase(name, "src") || 
+        if (url.isEmpty() && urlParameter.isEmpty() && (equalIgnoringCase(name, "src") ||
 			equalIgnoringCase(name, "movie") || equalIgnoringCase(name, "code") || equalIgnoringCase(name, "url")|| equalIgnoringCase(name, "FileName")))
             urlParameter = stripLeadingAndTrailingHTMLSpaces(p->value());
         // FIXME: serviceType calculation does not belong in this function.
@@ -252,7 +254,7 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
                 serviceType = serviceType.left(pos);
         }
     }
-    
+
     // When OBJECT is used for an applet via Sun's Java plugin, the CODEBASE attribute in the tag
     // points to the Java plugin itself (an ActiveX component) while the actual applet CODEBASE is
     // in a PARAM tag. See <http://java.sun.com/products/plugin/1.2/docs/tags.html>. This means
@@ -263,7 +265,7 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
         codebase = "codebase";
         uniqueParamNames.add(codebase.impl()); // pretend we found it in a PARAM already
     }
-    
+
     // Turn the attributes of the <object> element into arrays, but don't override <param> values.
     NamedNodeMap* attributes = this->attributes(true);
     if (attributes) {
@@ -276,9 +278,9 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
             }
         }
     }
-    
+
     mapDataParamToSrc(&paramNames, &paramValues);
-    
+
     // HTML5 says that an object resource's URL is specified by the object's data
     // attribute, not by a param element. However, for compatibility, allow the
     // resource's URL to be given by a param named "src", "movie", "code" or "url"
@@ -290,7 +292,7 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
     }
 }
 
-    
+
 bool HTMLObjectElement::hasFallbackContent() const
 {
     for (Node* child = firstChild(); child; child = child->nextSibling()) {
@@ -303,7 +305,7 @@ bool HTMLObjectElement::hasFallbackContent() const
     }
     return false;
 }
-    
+
 bool HTMLObjectElement::shouldAllowQuickTimeClassIdQuirk()
 {
     // This site-specific hack maintains compatibility with Mac OS X Wiki Server,
@@ -326,10 +328,10 @@ bool HTMLObjectElement::shouldAllowQuickTimeClassIdQuirk()
         if (equalIgnoringCase(metaElement->name(), "generator") && metaElement->content().startsWith("Mac OS X Server Web Services Server", false))
             return true;
     }
-    
+
     return false;
 }
-    
+
 bool HTMLObjectElement::hasValidClassId()
 {
 #if PLATFORM(QT)
@@ -339,17 +341,17 @@ bool HTMLObjectElement::hasValidClassId()
 
     if (MIMETypeRegistry::isJavaAppletMIMEType(serviceType()) && classId().startsWith("java:", false))
         return true;
-    
+
     if (shouldAllowQuickTimeClassIdQuirk())
         return true;
 
     if (equalIgnoringCase(serviceType(), "application/x-oleobject")&&
 		equalIgnoringCase( classId(), "CLSID:22d6f312-b0f6-11d0-94ab-0080c74c7e95" ))
     {
-        return true;	
+        return true;
     }
 
-	
+
 
     // HTML5 says that fallback content should be rendered if a non-empty
     // classid is specified for which the UA can't find a suitable plug-in.
@@ -362,19 +364,19 @@ Widget* HTMLObjectElement::pluginWidget()
 	{
 		return m_widget.get();
 	}
-	
+
     return HTMLPlugInImageElement::pluginWidget();
 }
 
 
 void HTMLObjectElement::setWidget(PassRefPtr<Widget> widget)
-{	
+{
 	if( m_oipfType == NO_OIPF_OBJ )
 	{
 		fprintf( stderr, "!!!!!! NO_OIPF_OBJ!!!!!!!\n" );
 		return;
 	}
-	
+
     if ( widget == m_widget )
         return;
 
@@ -392,7 +394,7 @@ void HTMLObjectElement::setWidget(PassRefPtr<Widget> widget)
 void HTMLObjectElement::updateWidgetIfNecessary()
 {
     document()->updateStyleIfNeeded();
-	
+
 //	fprintf( stderr, "serviceType = %s\n", m_serviceType.ascii().data() );
 
     if ((!needsWidgetUpdate() || useFallbackContent() || isImageType()) &&
@@ -402,7 +404,7 @@ void HTMLObjectElement::updateWidgetIfNecessary()
     }
 
 	if( m_oipfType != NO_OIPF_OBJ ) //( renderEmbeddedObject() == NULL && m_oipfType != NO_OIPF_OBJ ) || ( OIPF_HAS_NO_DISPLAY( m_oipfType ) ) )
-	{		
+	{
 		if( m_widget == 0 )
 		{
 			setNeedsWidgetUpdate(false);
@@ -411,36 +413,36 @@ void HTMLObjectElement::updateWidgetIfNecessary()
 			{
 				return;
 			}
-			
+
 			String url = this->url();
 			String serviceType = this->serviceType();
-			
+
 			// FIXME: These should be joined into a PluginParameters class.
 			Vector<String> paramNames;
 			Vector<String> paramValues;
 			parametersForPlugin(paramNames, paramValues, url, serviceType);
-			
+
 			// Note: url is modified above by parametersForPlugin.
 			if (!allowedToLoadFrameURL(url))
 			{
 				return;
 			}
-							
+
 			ASSERT(!m_inBeforeLoadEventHandler);
 			m_inBeforeLoadEventHandler = true;
 			bool beforeLoadAllowedLoad = dispatchBeforeLoadEvent(url);
 			m_inBeforeLoadEventHandler = false;
-			
+
 			// beforeload events can modify the DOM, potentially causing
 			// RenderWidget::destroy() to be called.  Ensure we haven't been
 			// destroyed before continuing.
 			// FIXME: Should this render fallback content?
 	//		if (!renderer())
 		//		return;
-			
+
 			RefPtr<HTMLObjectElement> protect(this); // Loading the plugin might remove us from the document.
 			SubframeLoader* loader = document()->frame()->loader()->subframeLoader();
-			
+
 			if( beforeLoadAllowedLoad && hasValidClassId() )
 				loader->requestObjectWithoutRenderer(this, url, getAttribute(nameAttr), serviceType, paramNames, paramValues);
 
@@ -452,8 +454,8 @@ void HTMLObjectElement::updateWidgetIfNecessary()
 				}
 			}
 		}
-				
-		return;		
+
+		return;
 	}
 
     if (!needsWidgetUpdate() || useFallbackContent() || isImageType())
@@ -474,7 +476,7 @@ void HTMLObjectElement::updateWidget(PluginCreationOption pluginCreationOption)
 //		fprintf( stderr, "ERROR>>>>>>>>>>>>>>>>> oipfType = %d\n", m_oipfType );
 //		return;
 //	}
-	
+
     ASSERT(!renderEmbeddedObject()->pluginCrashedOrWasMissing());
     // FIXME: We should ASSERT(needsWidgetUpdate()), but currently
     // FrameView::updateWidget() calls updateWidget(false) without checking if
@@ -483,7 +485,7 @@ void HTMLObjectElement::updateWidget(PluginCreationOption pluginCreationOption)
     // FIXME: This should ASSERT isFinishedParsingChildren() instead.
     if (!isFinishedParsingChildren())
         return;
-    
+
     String url = this->url();
     String serviceType = this->serviceType();
 
@@ -529,14 +531,14 @@ bool HTMLObjectElement::rendererIsNeeded(const NodeRenderingContext& context)
     if (!frame)
         return false;
 
-	/* hbbtv Object for OIPF will be always rendered 
-    if (equalIgnoringCase(serviceType(), "application/oipfobjectfactory") 
+	/* hbbtv Object for OIPF will be always rendered
+    if (equalIgnoringCase(serviceType(), "application/oipfobjectfactory")
 		|| equalIgnoringCase(serviceType(), "application/oipfapplicationmanager")
 		|| equalIgnoringCase(serviceType(), "application/oipfconfiguration")
 		|| equalIgnoringCase(serviceType(), "video/broadcast")
 		|| equalIgnoringCase(serviceType(), "video/mp4")
 		|| equalIgnoringCase(serviceType(), "video/mpeg")
-		|| equalIgnoringCase(serviceType(), "video/mpeg4")		
+		|| equalIgnoringCase(serviceType(), "video/mpeg4")
 		)
     {
 		fprintf( stderr, "%s %s %d\n", __FILE__, __func__, __LINE__ );
@@ -565,7 +567,7 @@ NPObject* HTMLObjectElement::getNPObject()
 {
 	if( !document() || !document()->frame() )
 		return NULL;
-	
+
 	return HTMLPlugInElement::getNPObject();
 }
 
@@ -623,7 +625,7 @@ void HTMLObjectElement::renderFallbackContent()
 {
     if (useFallbackContent())
         return;
-    
+
     if (!inDocument())
         return;
 
@@ -709,7 +711,7 @@ bool HTMLObjectElement::containsJavaApplet() const
 {
     if (MIMETypeRegistry::isJavaAppletMIMEType(getAttribute(typeAttr)))
         return true;
-        
+
     for (Element* child = firstElementChild(); child; child = child->nextElementSibling()) {
         if (child->hasTagName(paramTag)
                 && equalIgnoringCase(child->getAttribute(nameAttr), "type")
@@ -721,7 +723,7 @@ bool HTMLObjectElement::containsJavaApplet() const
         if (child->hasTagName(appletTag))
             return true;
     }
-    
+
     return false;
 }
 
